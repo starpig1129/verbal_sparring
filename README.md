@@ -34,6 +34,19 @@ battle.html  ── ws://host/ws/battle/{player_id} ──▶  app.py (FastAPI)
 - **`referee_core` 是 source `.py`，runtime 載入的是同名 `.so`**。改 `referee_core.py` 後必須 `python setup.py build_ext --inplace` 重編，否則不生效。
 - **模型不在遊戲 process 內**。由 vLLM 常駐載入，`referee_core` 只是個 HTTP client，所以遊戲 server 啟動是秒級的（不需載模型）。
 
+## 專案結構
+
+| 檔案 | 角色 |
+|---|---|
+| `app.py` | FastAPI server：WebSocket 連線、單一房間、回合制、廣播。 |
+| `battle.html` | 純靜態前端，WebSocket client + 血條 / 回合 UI。 |
+| `referee_core.py` | 裁判推論引擎 source（vLLM HTTP client）。**改完要重編 `.so`**。 |
+| `setup.py` | Cython 編譯設定，產出 `referee_core.*.so`。 |
+| `vision_probe.py` | 獨立的多模態探針腳本：在本機直接載 Gemma 驗證圖片辨識 / 量化效果，**與遊戲執行期無關**，是除錯 / 調校量化方式用的工具。 |
+| `requirements.txt` | 依用途分組的 Python 依賴。 |
+
+> 編譯產物（`build/`、`*.so`、`referee_core.c`）與 `__pycache__/` 已 gitignore，clone 後用 `setup.py` 自行重編。
+
 ## 函式庫 API：`referee_core`
 
 整個函式庫對外只暴露一個公開函式：
@@ -76,6 +89,14 @@ WebSocket 協定：
 
 ## 執行方式
 
+**0. 取得專案 + 安裝依賴**
+
+```bash
+git clone git@github.com:JuhanWu/verbal_sparring.git
+cd verbal_sparring
+pip install -r requirements.txt   # torch/transformers 等視覺探針依賴可選，見下方「依賴」
+```
+
 **1. 啟動 vLLM 模型服務（port 8001）**
 
 ```bash
@@ -103,6 +124,8 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 - **遊戲 server / 裁判引擎**：`fastapi`、`uvicorn`、`requests`、`cython`、`setuptools`
 - **模型服務**：`vllm`（0.20.x）+ 本地 `gemma-4-E4B-it` AWQ/compressed-tensors INT8 權重
 - 遊戲 process 本身**不需要** `torch` / `transformers`（模型都在 vLLM 那邊）
+
+完整版本鎖定見 [`requirements.txt`](requirements.txt)，分三組：**server 執行期**（fastapi / uvicorn / websockets / requests）、**Cython 編譯**（cython / setuptools）、**視覺探針選用**（torch / transformers / Pillow / bitsandbytes / accelerate，只有跑 `vision_probe.py` 才需要）。`vllm` 與模型權重需另外自備，不在 `requirements.txt` 內。
 
 ## 注意事項
 

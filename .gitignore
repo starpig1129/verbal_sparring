@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cython / build 產物（可用 `python setup.py build_ext --inplace` 重新產生）
+build/
+*.so
+referee_core.c
+
+# 虛擬環境
+.venv/
+venv/
+env/
+
+# 編輯器 / OS
+.vscode/
+.idea/
+.DS_Store
+
+# 模型權重 / 大型檔（若有放本地）
+*.bin
+*.safetensors
+*.gguf

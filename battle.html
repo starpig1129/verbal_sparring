@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>唇槍舌戰 - 競技場</title>
+    <style>
+        body { font-family: '微軟正黑體', sans-serif; background-color: #1a1a1a; color: #fff; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { width: 90%; max-width: 600px; background: #2c2c2c; padding: 20px; border-radius: 10px; box-shadow: 0 0 15px rgba(255,0,0,0.3); }
+        
+        /* 登入畫面 */
+        #login-screen { text-align: center; }
+        .btn-join { background: #e74c3c; color: white; border: none; padding: 15px 30px; margin: 10px; font-size: 18px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        .btn-join:hover { background: #c0392b; }
+
+        /* 血條區域 */
+        .hp-board { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 20px; font-weight: bold; }
+        .hp-bar-bg { width: 100%; background: #555; height: 25px; border-radius: 12px; margin-top: 5px; overflow: hidden; }
+        .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s ease, background 0.3s ease; }
+        .player-card { width: 45%; text-align: center; }
+
+        /* 聊天顯示區 */
+        #chat-log { background: #111; height: 350px; overflow-y: auto; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
+        .system-msg { color: #f39c12; text-align: center; margin: 10px 0; font-size: 14px; }
+        .attack-msg { background: #333; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 4px solid #e74c3c; }
+        .damage { color: #ff4757; font-weight: bold; }
+        .referee { color: #7bed9f; font-size: 14px; font-style: italic; }
+        .game-over { color: #ff4757; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; text-shadow: 0 0 10px red; }
+
+        /* 輸入區 */
+        #input-area { display: flex; }
+        #msg-input { flex-grow: 1; padding: 12px; font-size: 16px; border: none; border-radius: 5px 0 0 5px; background: #444; color: white; }
+        #send-btn { padding: 12px 20px; font-size: 16px; border: none; background: #3498db; color: white; cursor: pointer; border-radius: 0 5px 5px 0; font-weight: bold;}
+        #send-btn:hover { background: #2980b9; }
+        #upload-btn { padding: 12px 14px; font-size: 18px; border: none; background: #8e44ad; color: white; cursor: pointer; border-radius: 5px 0 0 5px; }
+        #upload-btn:hover { background: #732d91; }
+        #msg-input { border-radius: 0; }
+        #msg-input:disabled, #send-btn:disabled, #upload-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        #send-btn:disabled:hover { background: #3498db; }
+        #upload-btn:disabled:hover { background: #8e44ad; }
+        #img-preview { margin-top: 10px; }
+        #img-preview img { max-height: 80px; border-radius: 5px; border: 2px solid #8e44ad; vertical-align: middle; }
+        .attack-msg img { max-width: 100%; max-height: 220px; border-radius: 5px; margin: 6px 0; display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="login-screen">
+            <h1 style="color: #e74c3c;">🔥 唇槍舌戰 🔥</h1>
+            <p>請選擇你要扮演的角色進入競技場：</p>
+            <button class="btn-join" onclick="joinGame('Player_1')">以 Player 1 進入</button>
+            <button class="btn-join" onclick="joinGame('Player_2')">以 Player 2 進入</button>
+        </div>
+
+        <div id="game-screen" style="display: none;">
+            <div class="hp-board">
+                <div class="player-card">
+                    <div style="color: #3498db;">Player 1</div>
+                    <div class="hp-bar-bg"><div id="hp-Player_1" class="hp-bar-fill"></div></div>
+                </div>
+                <div style="color: #e74c3c;">VS</div>
+                <div class="player-card">
+                    <div style="color: #e67e22;">Player 2</div>
+                    <div class="hp-bar-bg"><div id="hp-Player_2" class="hp-bar-fill"></div></div>
+                </div>
+            </div>
+
+            <div id="chat-log"></div>
+
+            <div id="input-area">
+                <button id="upload-btn" onclick="document.getElementById('img-input').click()" title="上傳圖片嗆人">📎</button>
+                <input type="file" id="img-input" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
+                <input type="text" id="msg-input" placeholder="輸入你想噴的話... (按 Enter 送出)" onkeypress="handleEnter(event)">
+                <button id="send-btn" onclick="sendMessage()">送出</button>
+            </div>
+            <div id="img-preview"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let myPlayerId = null;
+        let selectedImage = null;  // 當前選好待送的圖片 data URL
+
+        function joinGame(playerId) {
+            myPlayerId = playerId;
+            const wsUrl = `ws://${location.host}/ws/battle/${playerId}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'block';
+                appendSystem(`你以【${playerId}】身份連上了競技場`);
+                // 進場先鎖住輸入，等 server 告知目前輪到誰
+                setInputEnabled(false, '等待對手...');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleServerMessage(data);
+            };
+
+            ws.onclose = () => {
+                appendSystem('連線已中斷');
+            };
+
+            ws.onerror = (err) => {
+                appendSystem('連線發生錯誤，請檢查 server 是否啟動');
+                console.error(err);
+            };
+        }
+
+        function handleServerMessage(data) {
+            if (data.hp_status) {
+                updateHpBars(data.hp_status);
+            }
+            if (data.current_turn !== undefined) {
+                updateTurnUI(data.current_turn);
+            }
+
+            if (data.type === 'system') {
+                appendSystem(data.message);
+            } else if (data.type === 'attack') {
+                appendAttack(data.sender, data.display_text, data.damage, data.referee_comment, data.display_image);
+            } else if (data.type === 'game_over') {
+                appendGameOver(data.message);
+            } else if (data.type === 'turn_error') {
+                appendSystem(data.message);
+            }
+        }
+
+        function updateTurnUI(currentTurn) {
+            const myTurn = currentTurn === myPlayerId;
+            if (myTurn) {
+                setInputEnabled(true, '輪到你了，開噴！(按 Enter 送出)');
+            } else {
+                setInputEnabled(false, `等待 ${currentTurn} 出招...`);
+            }
+        }
+
+        function setInputEnabled(enabled, placeholder) {
+            const input = document.getElementById('msg-input');
+            const btn = document.getElementById('send-btn');
+            const upload = document.getElementById('upload-btn');
+            input.disabled = !enabled;
+            btn.disabled = !enabled;
+            if (upload) upload.disabled = !enabled;
+            input.placeholder = placeholder;
+            btn.textContent = enabled ? '送出' : '等待中';
+        }
+
+        function updateHpBars(hpStatus) {
+            for (const [pid, hp] of Object.entries(hpStatus)) {
+                const bar = document.getElementById(`hp-${pid}`);
+                if (!bar) continue;
+                const pct = Math.max(0, Math.min(100, hp));
+                bar.style.width = `${pct}%`;
+                if (pct > 50) {
+                    bar.style.background = '#2ecc71';
+                } else if (pct > 25) {
+                    bar.style.background = '#f1c40f';
+                } else {
+                    bar.style.background = '#e74c3c';
+                }
+            }
+        }
+
+        function appendSystem(message) {
+            const log = document.getElementById('chat-log');
+            const div = document.createElement('div');
+            div.className = 'system-msg';
+            div.textContent = message;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function appendAttack(sender, displayText, damage, refereeComment, displayImage) {
+            const log = document.getElementById('chat-log');
+            const div = document.createElement('div');
+            div.className = 'attack-msg';
+            div.innerHTML = `
+                <div><strong>${escapeHtml(sender)}</strong>：${escapeHtml(displayText)}</div>
+                <div class="damage">造成傷害：${damage}</div>
+                <div class="referee">裁判短評：${escapeHtml(refereeComment)}</div>
+            `;
+            // 圖片用 DOM API 設 src 並限定 data:image/ 前綴，避免 innerHTML 注入
+            if (displayImage && typeof displayImage === 'string' && displayImage.startsWith('data:image/')) {
+                const img = document.createElement('img');
+                img.src = displayImage;
+                img.alt = '攻擊圖';
+                div.insertBefore(img, div.querySelector('.damage'));
+            }
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function appendGameOver(message) {
+            const log = document.getElementById('chat-log');
+            const div = document.createElement('div');
+            div.className = 'game-over';
+            div.textContent = message;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            if (input.disabled) return;  // 回合制：不是自己回合不能送
+            const text = input.value.trim();
+            if ((!text && !selectedImage) || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ text, image: selectedImage }));
+            input.value = '';
+            clearImage();
+            // 送出後先鎖住，避免重複出招，等 server attack 廣播再依 current_turn 解鎖
+            setInputEnabled(false, '裁判評分中...');
+        }
+
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                selectedImage = e.target.result;  // data URL
+                const preview = document.getElementById('img-preview');
+                preview.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = selectedImage;
+                const cancel = document.createElement('button');
+                cancel.textContent = '✕ 取消圖片';
+                cancel.onclick = clearImage;
+                cancel.style.cssText = 'margin-left:10px;padding:5px 12px;background:#e74c3c;color:#fff;border:none;border-radius:4px;cursor:pointer;';
+                preview.appendChild(img);
+                preview.appendChild(cancel);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            selectedImage = null;
+            document.getElementById('img-preview').innerHTML = '';
+            document.getElementById('img-input').value = '';
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

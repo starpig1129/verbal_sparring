@@ -59,9 +59,20 @@ async def test_create_match_vs_human(client: AsyncClient) -> None:
 
 
 async def test_create_match_unauthorized(client: AsyncClient) -> None:
-    """Calling the endpoint without an Authorization header returns 422."""
+    """Calling the endpoint without an Authorization header returns 401."""
     resp = await client.post(
         "/api/matches",
         json={"opponent": "npc"},
     )
-    assert resp.status_code == 422
+    assert resp.status_code == 401
+
+
+async def test_create_match_self(client: AsyncClient) -> None:
+    """Creating a match against yourself returns 400."""
+    token = await _register_and_token(client, "selfplayer")
+    resp = await client.post(
+        "/api/matches",
+        json={"opponent": "selfplayer"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400

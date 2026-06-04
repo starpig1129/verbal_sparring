@@ -44,6 +44,8 @@ async def create_match(
         opponent = result.scalar_one_or_none()
         if not opponent:
             raise HTTPException(status_code=404, detail="Opponent not found")
+        if str(opponent.id) == current["sub"]:
+            raise HTTPException(status_code=400, detail="Cannot create a match against yourself")
         player2_id = opponent.id
 
     match = Match(

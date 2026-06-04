@@ -73,7 +73,7 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_player(
-    authorization: str = Header(..., alias="Authorization"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict:
     """FastAPI dependency that extracts and validates the Bearer token.
 
@@ -85,9 +85,11 @@ async def get_current_player(
         ``username``.
 
     Raises:
-        HTTPException: 401 if the header is missing the Bearer prefix, or the
-            token has expired, or the token is otherwise invalid.
+        HTTPException: 401 if the header is absent, missing the Bearer prefix,
+            the token has expired, or the token is otherwise invalid.
     """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
     token = authorization.removeprefix("Bearer ")

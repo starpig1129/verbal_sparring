@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.backend.core.database import Base
+
+if TYPE_CHECKING:
+    from src.backend.models.player import Player
 
 
 class NpcMemory(Base):
@@ -22,6 +26,7 @@ class NpcMemory(Base):
         avg_damage_recv: Running average damage received per round from opponent.
         round_count: Total rounds observed against this opponent.
         updated_at: UTC timestamp of the last memory update.
+        opponent: Relationship to the Player this memory is about.
     """
 
     __tablename__ = "npc_memory"
@@ -32,6 +37,7 @@ class NpcMemory(Base):
     opponent_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("players.id"), unique=True, nullable=False
     )
+    opponent: Mapped["Player"] = relationship("Player", foreign_keys=[opponent_id])
     attack_patterns: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     weaknesses: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     avg_damage_recv: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)

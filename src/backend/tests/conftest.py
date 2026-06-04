@@ -1,9 +1,10 @@
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from src.backend.core.config import settings
-from src.backend.core.database import Base, get_session, make_engine, make_session_factory
+from src.backend.core.database import Base, get_session, make_session_factory
 
 # Prefer the configured test URL; fall back to in-memory SQLite when postgres
 # is not available in the current environment (e.g. CI without a pg container).
@@ -16,9 +17,7 @@ _SQLITE_FALLBACK = "sqlite+aiosqlite:///:memory:"
 
 async def _postgres_reachable(url: str) -> bool:
     """Return True if a quick async connection to the postgres URL succeeds."""
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    eng = create_async_engine(url, echo=False, pool_pre_ping=True)
+    eng = create_async_engine(url, echo=False, pool_pre_ping=True, poolclass=NullPool)
     try:
         async with eng.connect():
             return True
@@ -60,11 +59,17 @@ RESOLVED_URL = _resolve_test_url(_CONFIGURED_URL)
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine():
-    """Session-scoped engine that creates and tears down the test schema."""
+    """Session-scoped engine used ONLY for schema setup and teardown.
+
+    NullPool is used so that no asyncpg connections are held open between
+    operations, which prevents "Future attached to a different loop" errors
+    that occur when pooled connections created in one event loop are reused
+    from another.
+    """
     from src.backend.core.database import _import_models
 
     _import_models()
-    eng = make_engine(RESOLVED_URL)
+    eng = create_async_engine(RESOLVED_URL, echo=False, poolclass=NullPool)
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield eng
@@ -75,14 +80,28 @@ async def test_engine():
 
 @pytest_asyncio.fixture
 async def db(test_engine):
-    """Function-scoped session with SAVEPOINT isolation that rolls back after each test."""
-    async with test_engine.connect() as conn:
-        await conn.begin()
-        nested = await conn.begin_nested()  # SAVEPOINT
-        session = AsyncSession(bind=conn, expire_on_commit=False)
+    """Function-scoped session backed by a fresh NullPool engine.
+
+    A new engine (NullPool) is created per test so that asyncpg connections
+    are always bound to the current event loop.  Tables are truncated after
+    each test to keep tests isolated.
+
+    Note: the ``test_engine`` argument is kept as a dependency to guarantee
+    that ``Base.metadata.create_all`` has run before this fixture is used.
+    """
+    # Create a per-test engine so connections are bound to the current loop.
+    eng = create_async_engine(RESOLVED_URL, echo=False, poolclass=NullPool)
+    session_factory = make_session_factory(eng)
+    session = session_factory()
+    try:
         yield session
+    finally:
         await session.close()
-        await conn.rollback()  # rolls back even committed work within savepoint
+        # Truncate all tables to isolate the next test.
+        async with eng.begin() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
+        await eng.dispose()
 
 
 @pytest_asyncio.fixture

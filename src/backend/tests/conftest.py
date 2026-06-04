@@ -75,11 +75,14 @@ async def test_engine():
 
 @pytest_asyncio.fixture
 async def db(test_engine):
-    """Function-scoped session that rolls back after each test."""
-    factory = make_session_factory(test_engine)
-    async with factory() as session:
+    """Function-scoped session with SAVEPOINT isolation that rolls back after each test."""
+    async with test_engine.connect() as conn:
+        await conn.begin()
+        nested = await conn.begin_nested()  # SAVEPOINT
+        session = AsyncSession(bind=conn, expire_on_commit=False)
         yield session
-        await session.rollback()
+        await session.close()
+        await conn.rollback()  # rolls back even committed work within savepoint
 
 
 @pytest_asyncio.fixture

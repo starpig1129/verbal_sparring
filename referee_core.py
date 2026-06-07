@@ -6,8 +6,8 @@
 import json
 import requests
 
-VLLM_URL = "http://localhost:8001/v1/chat/completions"
-MODEL_NAME = "gemma4-referee"
+VLLM_URL = "http://localhost:8060/v1/chat/completions"
+MODEL_NAME = "referee_roast"
 
 print(f"🚀 裁判引擎改接 vLLM API：{VLLM_URL}（模型 {MODEL_NAME}）")
 

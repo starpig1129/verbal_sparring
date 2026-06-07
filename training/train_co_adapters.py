@@ -22,6 +22,11 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model, PeftModel
 from trl import SFTTrainer
+try:
+    from trl import SFTConfig
+except ImportError:
+    SFTConfig = None
+
 
 # Seed for training reproducibility
 TRAINING_REPRODUCIBILITY_SEED: int = 42
@@ -90,32 +95,88 @@ def train_adapter(
     # Load SFT dataset
     dataset = load_dataset("json", data_files={"train": dataset_path})
     
-    # Define hyperparameter constraints
-    training_args = TrainingArguments(
-        output_dir=output_dir,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=4,
-        learning_rate=2e-4,
-        bf16=True,
-        logging_steps=10,
-        save_strategy="no",
-        optim="paged_adamw_8bit"
-    )
-    
-    trainer = SFTTrainer(
-        model=model,
-        train_dataset=dataset["train"],
-        peft_config=peft_config,
-        max_seq_length=512,
-        dataset_text_field="text",
-        args=training_args
-    )
+    # Custom conversational formatting function using model processor/tokenizer templates
+    # Supports both batched and non-batched mapping inputs
+    def formatting_prompts_func(example):
+        is_batch = False
+        if "messages" in example:
+            if len(example["messages"]) > 0 and isinstance(example["messages"][0], list):
+                is_batch = True
+
+        def format_single_chat(messages):
+            if hasattr(processor, "tokenizer") and hasattr(processor.tokenizer, "apply_chat_template"):
+                return processor.tokenizer.apply_chat_template(messages, tokenize=False)
+            elif hasattr(processor, "apply_chat_template"):
+                return processor.apply_chat_template(messages, tokenize=False)
+            else:
+                formatted = ""
+                for msg in messages:
+                    formatted += f"<start_of_turn>{msg['role']}\n{msg['content']}<end_of_turn>\n"
+                return formatted
+
+        if is_batch:
+            return [format_single_chat(msgs) for msgs in example["messages"]]
+        else:
+            return format_single_chat(example["messages"])
+
+
+    # Define SFTConfig if supported, otherwise fallback to TrainingArguments
+    if SFTConfig is not None:
+        try:
+            training_args = SFTConfig(
+                output_dir=output_dir,
+                per_device_train_batch_size=2,
+                gradient_accumulation_steps=4,
+                learning_rate=2e-4,
+                bf16=True,
+                logging_steps=10,
+                save_strategy="no",
+                optim="paged_adamw_8bit",
+                max_length=512
+            )
+        except TypeError:
+            training_args = SFTConfig(
+                output_dir=output_dir,
+                per_device_train_batch_size=2,
+                gradient_accumulation_steps=4,
+                learning_rate=2e-4,
+                bf16=True,
+                logging_steps=10,
+                save_strategy="no",
+                optim="paged_adamw_8bit",
+                max_seq_length=512
+            )
+        trainer = SFTTrainer(
+            model=model,
+            train_dataset=dataset["train"],
+            formatting_func=formatting_prompts_func,
+            args=training_args
+        )
+    else: 
+        training_args = TrainingArguments(
+            output_dir=output_dir,
+            per_device_train_batch_size=2,
+            gradient_accumulation_steps=4,
+            learning_rate=2e-4,
+            bf16=True,
+            logging_steps=10,
+            save_strategy="no",
+            optim="paged_adamw_8bit"
+        )
+        trainer = SFTTrainer(
+            model=model,
+            train_dataset=dataset["train"],
+            max_seq_length=512,
+            formatting_func=formatting_prompts_func,
+            args=training_args
+        )
     
     trainer.train()
     
     # Save target adapter weights
     model.save_pretrained(os.path.join(output_dir, adapter_name))
     print(f"Successfully trained and saved adapter {adapter_name} to {output_dir}")
+
 
 if __name__ == "__main__":
     print("🚀 Starting Multi-Adapter Co-Training Pipeline...")

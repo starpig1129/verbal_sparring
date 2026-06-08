@@ -18,14 +18,14 @@ export default function HPBar({ label, hp, maxHp = 100 }: Props) {
   const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100))
   return (
     <div>
-      <div className="flex justify-between mb-1">
-        <span className="font-mono text-aged text-[8px] tracking-[3px] uppercase">{label}</span>
+      <div className="flex justify-between mb-1.5 items-end">
+        <span className="font-mono text-[#e2d6be] text-xs font-semibold tracking-[2px] uppercase">{label}</span>
         <span>
-          <span className="font-display text-white text-lg leading-none">{hp}</span>
-          <span className="text-bamboo text-xs"> /{maxHp}</span>
+          <span className="font-display text-white text-xl leading-none font-bold">{hp}</span>
+          <span className="text-[#a88a6d] text-xs"> /{maxHp}</span>
         </span>
       </div>
-      <div className="bg-[#080805] border border-bamboo h-[7px]">
+      <div className="bg-[#080805] border border-[#4a3f28] h-[10px] rounded-full overflow-hidden">
         <motion.div
           role="progressbar"
           aria-valuenow={hp}

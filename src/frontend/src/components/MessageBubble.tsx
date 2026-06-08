@@ -12,8 +12,8 @@ export default function MessageBubble(props: Props) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.4 }}
-        className="text-bark text-[9px] font-mono tracking-[2px] text-center my-1 py-1"
+        animate={{ opacity: 0.85 }}
+        className="text-[#a88a6d] text-xs font-mono tracking-[2px] text-center my-1.5 py-1"
       >
         {props.displayText}
       </motion.div>
@@ -26,14 +26,14 @@ export default function MessageBubble(props: Props) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="flex gap-2 items-baseline py-[2px]"
+        className="flex gap-3 items-center py-1.5 border-b border-[#1b1510]/30"
       >
-        <span className={`font-display text-[13px] tracking-wider min-w-[55px] uppercase flex-shrink-0 ${props.isNpc ? 'text-vermillion' : 'text-white'}`}>
+        <span className={`font-display text-sm md:text-base tracking-wider min-w-[70px] uppercase flex-shrink-0 font-bold ${props.isNpc ? 'text-vermillion' : 'text-white'}`}>
           {props.sender}
         </span>
-        <span className="text-[#d4c5aa] font-body italic text-[11px] flex-1">{props.displayText}</span>
-        <span className="bg-[#140a00] border border-[#3a1800] text-aged px-2 py-[1px] font-mono text-[9px] whitespace-nowrap flex-shrink-0">
-          -<b className="text-white text-[11px]">{props.damage}</b>
+        <span className="text-[#fff0d4] font-body text-sm md:text-base flex-1 leading-relaxed">{props.displayText}</span>
+        <span className="bg-[#2a1100] border border-[#ff4400]/40 text-[#ff8800] px-2.5 py-0.5 font-mono text-xs rounded whitespace-nowrap flex-shrink-0 shadow-[0_0_6px_rgba(255,68,0,0.15)]">
+          -<b className="text-white text-sm font-bold ml-0.5">{props.damage}</b>
         </span>
       </motion.div>
     )

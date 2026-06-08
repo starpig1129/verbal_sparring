@@ -9,6 +9,7 @@ export type ServerMessage =
   | { type: 'npc_attack'; display_text: string; damage: number; referee_comment: string; hp_status: HPMap }
   | { type: 'game_over'; message: string; winner: string }
   | { type: 'turn_error'; message: string }
+  | { type: 'error'; message: string }
 
 export type ChatEntry =
   | { id: number; kind: 'system'; displayText: string }

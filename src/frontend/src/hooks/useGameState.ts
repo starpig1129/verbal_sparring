@@ -42,6 +42,8 @@ export function useGameState(myPlayerId: string) {
     } else if (msg.type === 'game_over') {
       setGameOver(msg.winner)
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: msg.message }])
+    } else if (msg.type === 'error') {
+      setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: `【系統錯誤】${msg.message}` }])
     }
   }, [myPlayerId])
 

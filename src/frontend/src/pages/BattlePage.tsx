@@ -55,10 +55,10 @@ export default function BattlePage() {
   return (
     <motion.div animate={shakeControls} className="flex flex-col h-screen bg-ink text-white overflow-hidden">
       {/* Top bar */}
-      <div className="bg-[#0f0e0b] border-b-2 border-bamboo flex justify-between items-center px-4 py-2 flex-shrink-0">
-        <span className="font-display text-[12px] text-white tracking-[2px]">唇槍<span className="text-vermillion">舌戰</span></span>
-        <span className="font-mono text-bark text-[8px] tracking-[3px]">ROUND <span className="font-display text-white text-[12px]">{String(Math.ceil(roundCount / 2)).padStart(2, '0')}</span></span>
-        <button onClick={() => navigate('/')} className="font-mono text-bark text-[8px] border border-bamboo px-2 py-1 tracking-[2px] hover:text-aged">回主頁</button>
+      <div className="bg-[#0f0e0b] border-b-2 border-[#4a3f28] flex justify-between items-center px-4 py-3 flex-shrink-0">
+        <span className="font-display text-base md:text-lg text-white tracking-[2px]">唇槍<span className="text-vermillion">舌戰</span></span>
+        <span className="font-mono text-[#a88a6d] text-xs tracking-[3px] font-semibold">ROUND <span className="font-display text-white text-base font-bold">{String(Math.ceil(roundCount / 2)).padStart(2, '0')}</span></span>
+        <button onClick={() => navigate('/')} className="font-mono text-[#e2d6be] text-xs border border-[#4a3f28] hover:border-vermillion hover:text-white bg-[#120f0a] px-3.5 py-1.5 tracking-[2px] rounded transition-all duration-150 transform active:scale-95">回主頁</button>
       </div>
 
       {/* HP section */}

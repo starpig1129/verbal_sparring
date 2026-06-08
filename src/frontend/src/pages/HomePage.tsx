@@ -41,25 +41,25 @@ export default function HomePage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-ink">
-        <div className="w-full max-w-xs px-6 py-8">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#120f0a] via-[#0a0905] to-[#050403] px-4">
+        <div className="w-full max-w-sm bg-[#0f0e0a]/90 border border-[#4a3f28] shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl p-8 backdrop-blur-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="font-display text-[42px] text-white tracking-[5px] leading-tight">唇槍</div>
-            <div className="font-display text-[42px] text-vermillion tracking-[5px] leading-tight" style={{ textShadow: '0 0 20px rgba(204,51,0,0.5)' }}>舌戰</div>
-            <div className="font-mono text-bark text-[7px] tracking-[6px] mt-1">VERBAL SPARRING</div>
+            <div className="font-display text-[48px] text-white tracking-[5px] leading-tight">唇槍</div>
+            <div className="font-display text-[48px] text-vermillion tracking-[5px] leading-tight" style={{ textShadow: '0 0 25px rgba(204,51,0,0.5)' }}>舌戰</div>
+            <div className="font-mono text-[#a88a6d] text-xs tracking-[6px] mt-2 font-semibold">VERBAL SPARRING</div>
           </div>
           {/* Auth tabs */}
-          <div className="flex border border-bamboo mb-3">
-            <button onClick={() => setTab('login')} className={`flex-1 py-2 font-display text-[10px] tracking-[3px] ${tab === 'login' ? 'bg-vermillion text-white' : 'text-bark'}`}>登入</button>
-            <button onClick={() => setTab('register')} className={`flex-1 py-2 font-mono text-[10px] tracking-[3px] ${tab === 'register' ? 'bg-vermillion text-white' : 'text-bark'}`}>註冊</button>
+          <div className="flex border border-[#4a3f28] mb-4 rounded overflow-hidden">
+            <button onClick={() => setTab('login')} className={`flex-1 py-2.5 font-display text-xs md:text-sm tracking-[3px] font-bold transition-all ${tab === 'login' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>登入</button>
+            <button onClick={() => setTab('register')} className={`flex-1 py-2.5 font-mono text-xs md:text-sm tracking-[3px] font-bold transition-all ${tab === 'register' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>註冊</button>
           </div>
           {/* Inputs */}
           <input
             placeholder="用戶名"
             value={inputUsername}
             onChange={e => setInputUsername(e.target.value)}
-            className="w-full bg-[#080805] border border-bamboo px-3 py-2 text-aged font-mono text-[10px] mb-2 focus:outline-none focus:border-vermillion"
+            className="w-full bg-[#080805] border border-[#4a3f28] px-4 py-2.5 text-white font-mono text-sm mb-3 focus:outline-none focus:border-vermillion rounded"
           />
           <input
             type="password"
@@ -67,36 +67,36 @@ export default function HomePage() {
             value={inputPassword}
             onChange={e => setInputPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAuth()}
-            className="w-full bg-[#080805] border border-bamboo px-3 py-2 text-aged font-mono text-[10px] mb-3 focus:outline-none focus:border-vermillion"
+            className="w-full bg-[#080805] border border-[#4a3f28] px-4 py-2.5 text-white font-mono text-sm mb-4 focus:outline-none focus:border-vermillion rounded"
           />
           {error && (
-            <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2 text-[#cc6633] font-mono text-[9px] mb-3">{error}</div>
+            <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2.5 text-[#ff6644] font-mono text-xs mb-4 rounded">{error}</div>
           )}
-          <Button variant="primary-outline" onClick={handleAuth} className="w-full">進入戰場</Button>
+          <Button variant="primary-outline" onClick={handleAuth} className="w-full py-2.5 rounded-lg text-xs md:text-sm">進入戰場</Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-ink p-6">
+    <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-[#120f0a] via-[#0a0905] to-[#050403] p-6 min-h-[calc(100vh-60px)]">
       {/* Welcome */}
-      <div className="mb-6 text-center">
-        <div className="font-mono text-bark text-[8px] tracking-[3px] mb-1">武士歸來</div>
-        <div className="font-display text-[24px] text-white tracking-[2px]">
-          {username.toUpperCase()}<span className="text-vermillion text-[14px] ml-2 tracking-wider">入場</span>
+      <div className="mb-8 text-center">
+        <div className="font-mono text-[#a88a6d] text-xs tracking-[3px] mb-2 font-semibold">武士歸來</div>
+        <div className="font-display text-[28px] text-white tracking-[2px] font-bold">
+          {username.toUpperCase()}<span className="text-vermillion text-lg ml-3 tracking-wider">入場</span>
         </div>
       </div>
       {/* Match card */}
-      <div className="w-full max-w-sm border border-bamboo bg-parchment p-5">
-        <div className="font-mono text-bark text-[8px] tracking-[3px] mb-3">選擇對手</div>
-        <div className="flex border border-bamboo mb-3">
+      <div className="w-full max-w-md bg-[#0f0e0a]/90 border border-[#4a3f28] shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl p-6 backdrop-blur-md">
+        <div className="font-mono text-[#e2d6be] text-xs tracking-[3px] mb-4 font-semibold border-b border-[#3a3020] pb-2">選擇對手</div>
+        <div className="flex border border-[#4a3f28] mb-4 rounded overflow-hidden">
           <button onClick={() => { setOpponentTab('npc'); setOpponent('npc') }}
-            className={`flex-1 py-2 font-display text-[10px] tracking-[2px] ${opponentTab === 'npc' ? 'bg-vermillion text-white' : 'text-bark'}`}>
+            className={`flex-1 py-2.5 font-display text-xs md:text-sm tracking-[2px] font-bold transition-all ${opponentTab === 'npc' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>
             AI NPC
           </button>
           <button onClick={() => setOpponentTab('human')}
-            className={`flex-1 py-2 font-mono text-[10px] tracking-[2px] ${opponentTab === 'human' ? 'bg-vermillion text-white' : 'text-bark'}`}>
+            className={`flex-1 py-2.5 font-mono text-xs md:text-sm tracking-[2px] font-bold transition-all ${opponentTab === 'human' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>
             人類對手
           </button>
         </div>
@@ -105,13 +105,13 @@ export default function HomePage() {
             placeholder="輸入對手用戶名"
             value={opponent === 'npc' ? '' : opponent}
             onChange={e => setOpponent(e.target.value || 'npc')}
-            className="w-full bg-ink border border-bamboo px-3 py-2 text-aged font-mono text-[10px] mb-3 focus:outline-none focus:border-vermillion"
+            className="w-full bg-[#080805] border border-[#4a3f28] px-4 py-2.5 text-white font-mono text-sm mb-4 focus:outline-none focus:border-vermillion rounded"
           />
         )}
         {matchError && (
-          <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2 text-[#cc6633] font-mono text-[9px] mb-3">{matchError}</div>
+          <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2.5 text-[#ff6644] font-mono text-xs mb-4 rounded">{matchError}</div>
         )}
-        <Button variant="primary-solid" onClick={handleStartMatch} className="w-full">開戰！</Button>
+        <Button variant="primary-solid" onClick={handleStartMatch} className="w-full py-3 rounded-xl text-xs md:text-sm">開戰！</Button>
       </div>
     </div>
   )

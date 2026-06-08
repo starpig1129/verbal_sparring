@@ -63,7 +63,7 @@ async def _call_ollama(messages: list[dict]) -> str:
             "stream": False,
             "temperature": settings.player_temperature,
         }
-        async with httpx.AsyncClient(timeout=60) as c:
+        async with httpx.AsyncClient(timeout=5.0) as c:
             resp = await c.post(f"{settings.vllm_url}/v1/chat/completions", json=payload)
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"].strip()
@@ -74,7 +74,7 @@ async def _call_ollama(messages: list[dict]) -> str:
             "stream": False,
             "options": {"temperature": settings.player_temperature},
         }
-        async with httpx.AsyncClient(timeout=60) as c:
+        async with httpx.AsyncClient(timeout=5.0) as c:
             resp = await c.post(f"{settings.ollama_url}/api/chat", json=payload)
             resp.raise_for_status()
             return resp.json()["message"]["content"].strip()
@@ -218,16 +218,33 @@ async def run_npc_turn(
     Returns:
         Generated attack string from the NPC (up to ~20 Chinese characters).
     """
-    memory = await _get_memory(db, opponent_id)
-    initial: NPCState = {
-        "match_id": match_id,
-        "opponent_id": opponent_id,
-        "my_hp": my_hp,
-        "opponent_hp": opponent_hp,
-        "round_number": round_number,
-        "recent_opponent_attacks": recent_opponent_attacks,
-        "memory": memory,
-        "attack_text": "",
-    }
-    result = await _npc_graph.ainvoke(initial)
-    return result["attack_text"]
+    try:
+        memory = await _get_memory(db, opponent_id)
+        initial: NPCState = {
+            "match_id": match_id,
+            "opponent_id": opponent_id,
+            "my_hp": my_hp,
+            "opponent_hp": opponent_hp,
+            "round_number": round_number,
+            "recent_opponent_attacks": recent_opponent_attacks,
+            "memory": memory,
+            "attack_text": "",
+        }
+        result = await _npc_graph.ainvoke(initial)
+        if not result.get("attack_text"):
+            raise ValueError("Empty response from NPC agent")
+        return result["attack_text"]
+    except Exception as e:
+        print(f"[NPC ERROR] Failed generating NPC attack: {e}. Running fallback NPC taunt...", flush=True)
+        import random
+        npc_taunts = [
+            "就這點實力？我代碼寫得都比你好！",
+            "你的攻擊軟綿綿的，是在幫我按摩嗎？",
+            "放棄吧，人類的智慧在 AI 面前不堪一擊！",
+            "你的發言已經被我歸類為垃圾郵件了。",
+            "重開機吧，你這局已經沒救了。",
+            "我一秒鐘能運算百萬次，你一秒鐘只能發呆一次！",
+            "你連當我的訓練集都不配！",
+            "你的嘲諷還不如 404 Page Not Found 有創意。"
+        ]
+        return random.choice(npc_taunts)

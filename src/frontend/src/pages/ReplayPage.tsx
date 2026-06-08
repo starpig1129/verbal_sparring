@@ -105,8 +105,13 @@ export default function ReplayPage() {
         </>
       )}
 
-      <div className="text-center mt-6">
-        <Link to="/" className="font-mono text-bark text-[9px] tracking-[2px] hover:text-aged">← 回首頁</Link>
+      <div className="text-center mt-8 w-full flex justify-center">
+        <Link
+          to="/"
+          className="inline-flex items-center justify-center gap-2 font-mono text-xs text-[#a88a6d] hover:text-white border border-[#4a3f28] hover:border-[#886655] bg-[#14100b] hover:bg-[#1a1610] px-6 py-2.5 rounded-xl shadow-sm tracking-[2px] transition-all duration-100 transform active:scale-95 w-full max-w-xs"
+        >
+          ← 返回大廳
+        </Link>
       </div>
     </div>
   )

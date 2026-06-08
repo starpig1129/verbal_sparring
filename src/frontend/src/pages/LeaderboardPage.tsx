@@ -56,8 +56,13 @@ export default function LeaderboardPage() {
       <div className="text-[#2a1a0a] font-body italic text-[8px] tracking-[3px] text-center border-t border-[#1a1610] pt-4 mt-6">
         ⸺ 以筆傷人，武林稱霸 ⸺
       </div>
-      <div className="text-center mt-4">
-        <Link to="/" className="font-mono text-bark text-[9px] tracking-[2px] hover:text-aged">← 回首頁</Link>
+      <div className="text-center mt-6 w-full flex justify-center">
+        <Link
+          to="/"
+          className="inline-flex items-center justify-center gap-2 font-mono text-xs text-[#a88a6d] hover:text-white border border-[#4a3f28] hover:border-[#886655] bg-[#14100b] hover:bg-[#1a1610] px-6 py-2.5 rounded-xl shadow-sm tracking-[2px] transition-all duration-100 transform active:scale-95 w-full max-w-xs"
+        >
+          ← 返回大廳
+        </Link>
       </div>
     </div>
   )

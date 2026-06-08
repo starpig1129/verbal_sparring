@@ -321,10 +321,11 @@ async def battle_ws(
                     await room.broadcast(
                         {
                             "type": "npc_attack",
-                            "display_text": npc_display_text,
-                            "damage": npc_damage,
-                            "referee_comment": npc_comment,
+                            "display_text": npc_ref["display_text"],
+                            "damage": npc_ref["damage"],
+                            "referee_comment": npc_ref["comment"],
                             "hp_status": dict(room.hp),
+                            "current_turn": room.current_turn,
                         }
                     )
 

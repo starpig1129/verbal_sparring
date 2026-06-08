@@ -33,6 +33,7 @@ export function useGameState(myPlayerId: string) {
       ])
     } else if (msg.type === 'npc_attack') {
       setHp(msg.hp_status)
+      setCurrentTurn(msg.current_turn)
       setLastDamageEvent({ damage: msg.damage, id: nextId() })
       const attackId = nextId()
       setChatLog(prev => [...prev,

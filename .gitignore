@@ -25,6 +25,7 @@ env/
 
 # Backend 環境變數（不 commit 敏感資訊；frontend .env.development / .env.production 仍追蹤）
 src/backend/.env
+.env
 
 # Frontend
 node_modules/

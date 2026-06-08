@@ -95,9 +95,10 @@ services:
 
   tunnel:
     image: cloudflare/cloudflared:latest
+    user: root
     volumes:
       - ${CLOUDFLARED_DIR:-~/.cloudflared}:/etc/cloudflared
-    command: tunnel --config /etc/cloudflared/config.yml run vs-tunnel
+    command: tunnel --config /etc/cloudflared/config.yml run
     restart: always
     depends_on:
       - backend

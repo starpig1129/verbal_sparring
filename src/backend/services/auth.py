@@ -4,15 +4,13 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Header, HTTPException
 from jose import ExpiredSignatureError, JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 
 from src.backend.core.config import settings
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(plain: str) -> str:
-    """Hash a plain-text password using bcrypt.
+    """Hash a plain-text password using bcrypt directly.
 
     Args:
         plain: The plain-text password string.
@@ -20,11 +18,12 @@ def hash_password(plain: str) -> str:
     Returns:
         A bcrypt-hashed password string.
     """
-    return _pwd.hash(plain)
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(plain.encode("utf-8"), salt).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a plain-text password against a stored hash.
+    """Verify a plain-text password against a stored bcrypt hash.
 
     Args:
         plain: The plain-text password to verify.
@@ -33,7 +32,10 @@ def verify_password(plain: str, hashed: str) -> bool:
     Returns:
         True if the password matches, False otherwise.
     """
-    return _pwd.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 def create_access_token(user_id: str, username: str) -> str:

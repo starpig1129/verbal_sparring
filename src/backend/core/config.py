@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     secret_key: str
     access_token_expire_minutes: int = 10080
 
-    model_config = SettingsConfigDict(env_file=_ENV_FILE, extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, extra="ignore", protected_namespaces=())
 
 
 # Initialize settings with YAML defaults.

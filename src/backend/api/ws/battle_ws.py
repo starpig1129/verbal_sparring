@@ -73,6 +73,54 @@ async def _finish_match(
             await db.commit()
 
 
+async def _do_game_over(
+    session,
+    db: AsyncSession,
+    room,
+    match_id: str,
+    is_npc: bool,
+    out: dict,
+    player_id: str,
+    attacker_player_id: str,
+) -> None:
+    """Broadcast game-over, persist result, schedule memory analysis, then reset room."""
+    winner_key = out["winner"]  # URL-param player_id or "NPC"
+    winner_uuid = attacker_player_id if winner_key == player_id else None
+    print(f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})", flush=True)
+
+    battle_messages = session.get_messages()
+    destroy_battle_session(match_id)
+
+    if is_npc:
+        damage_to_npc = 100 - max(0, out["hp"].get("NPC", 0))
+        asyncio.create_task(
+            analyze_and_update_player_memory(
+                db, attacker_player_id, battle_messages,
+                damage_to_npc, out["round_number"],
+            )
+        )
+
+    await _finish_match(db, match_id, winner_uuid)
+    await room.broadcast({
+        "type": "game_over",
+        "message": (
+            f"【{winner_key}】把對手噴到生活不能自理！"
+            if winner_key != "NPC"
+            else "AI 裁判：就這點實力？"
+        ),
+        "winner": winner_key,
+    })
+    room.reset()
+    if is_npc:
+        room.hp["NPC"] = 100
+    await room.broadcast({
+        "type": "system",
+        "message": "新的一局開始！",
+        "hp_status": room.hp,
+        "current_turn": room.current_turn,
+    })
+
+
 @router.websocket("/ws/battle/{match_id}/{player_id}")
 async def battle_ws(
     websocket: WebSocket,
@@ -192,7 +240,6 @@ async def battle_ws(
                     flush=True,
                 )
 
-                # Get or create the persistent BattleSession for this match
                 session = get_battle_session(match_id)
                 if not session:
                     session = create_battle_session(
@@ -203,144 +250,111 @@ async def battle_ws(
                         initial_hp=dict(room.hp),
                     )
 
-                # Process attack through the persistent LangGraph
-                state = await session.process_attack(
+                # Stream results node-by-node so we can broadcast each step immediately.
+                # _npc_pending_text carries the NPC's words from npc_generate to npc_score.
+                _npc_pending_text: str = ""
+                async for node_name, out in session.process_attack_streaming(
                     attack_text=text,
                     attacker_id=player_id,
                     db=db,
                     image_b64=image_b64,
                     sender_display=player_id,
-                )
+                ):
+                    if node_name == "score_player_attack":
+                        # ── Player attack result available ────────────────────
+                        room.hp = dict(out["hp"])
+                        room.round_number = out["round_number"]
+                        if not out.get("game_over"):
+                            room.current_turn = out["current_turn"]
 
-                # Sync room state from BattleState
-                room.hp = dict(state["hp"])
-                room.round_number = state["round_number"]
-                room.current_turn = state["current_turn"] or player_id
-
-                # Detect whether the NPC also took a turn this invocation
-                npc_attacked = is_npc and bool(state.get("npc_text"))
-
-                # Round numbers: player round incremented first, NPC round is one higher
-                player_round = state["round_number"] - (1 if npc_attacked else 0)
-
-                print(
-                    f"[WS PROCESS] Referee: damage={state['damage']}, "
-                    f"comment={state['ref_comment']}", flush=True,
-                )
-
-                # ── Persist & broadcast player's attack ───────────────────────
-                await _persist_round(
-                    db,
-                    match_id,
-                    player_round,
-                    attacker_player_id,
-                    text,
-                    image_b64,
-                    state["ref_display_text"],
-                    state["damage"],
-                    state["ref_comment"],
-                    dict(room.hp),
-                )
-
-                attacker_result = await db.execute(
-                    select(Player).where(Player.id == uuid.UUID(attacker_player_id))
-                )
-                attacker = attacker_result.scalar_one_or_none()
-                if attacker:
-                    attacker.total_damage += state["damage"]
-                    await db.commit()
-
-                await room.broadcast(
-                    {
-                        "type": "attack",
-                        "sender": player_id,
-                        "original_text": text,
-                        "display_text": state["ref_display_text"],
-                        "damage": state["damage"],
-                        "referee_comment": state["ref_comment"],
-                        "hp_status": dict(room.hp),
-                        "current_turn": room.current_turn,
-                    }
-                )
-
-                # ── Persist & broadcast NPC attack (if it happened) ───────────
-                if npc_attacked:
-                    print(
-                        f"[WS PROCESS] NPC attack: {state['npc_text'][:30]}...",
-                        flush=True,
-                    )
-                    await _persist_round(
-                        db,
-                        match_id,
-                        state["round_number"],
-                        None,
-                        state["npc_text"],
-                        None,
-                        state["npc_ref_display_text"],
-                        state["npc_damage"],
-                        state["npc_ref_comment"],
-                        dict(room.hp),
-                    )
-                    await room.broadcast(
-                        {
-                            "type": "npc_attack",
-                            "npc_text": state["npc_text"],
-                            "display_text": state["npc_ref_display_text"],
-                            "damage": state["npc_damage"],
-                            "referee_comment": state["npc_ref_comment"],
-                            "hp_status": dict(room.hp),
-                            "current_turn": room.current_turn,
-                        }
-                    )
-
-                # ── Handle game over ──────────────────────────────────────────
-                if state["game_over"]:
-                    winner_key = state["winner"]  # URL-param player_id or "NPC"
-                    winner_uuid = attacker_player_id if winner_key == player_id else None
-                    print(
-                        f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})",
-                        flush=True,
-                    )
-
-                    # Collect messages before destroying session
-                    battle_messages = session.get_messages()
-                    destroy_battle_session(match_id)
-
-                    if is_npc:
-                        damage_to_npc = 100 - max(0, state["hp"].get("NPC", 0))
-                        asyncio.create_task(
-                            analyze_and_update_player_memory(
-                                db,
-                                attacker_player_id,
-                                battle_messages,
-                                damage_to_npc,
-                                state["round_number"],
-                            )
+                        print(
+                            f"[WS PROCESS] Referee: damage={out['damage']}, "
+                            f"comment={out['ref_comment']}", flush=True,
                         )
 
-                    await _finish_match(db, match_id, winner_uuid)
-                    await room.broadcast(
-                        {
-                            "type": "game_over",
-                            "message": (
-                                f"【{winner_key}】把對手噴到生活不能自理！"
-                                if winner_key != "NPC"
-                                else "AI 裁判：就這點實力？"
-                            ),
-                            "winner": winner_key,
-                        }
-                    )
-                    room.reset()
-                    if is_npc:
-                        room.hp["NPC"] = 100
-                    await room.broadcast(
-                        {
-                            "type": "system",
-                            "message": "新的一局開始！",
-                            "hp_status": room.hp,
+                        await _persist_round(
+                            db, match_id, out["round_number"],
+                            attacker_player_id, text, image_b64,
+                            out["ref_display_text"], out["damage"],
+                            out["ref_comment"], dict(room.hp),
+                        )
+                        attacker_row = await db.execute(
+                            select(Player).where(Player.id == uuid.UUID(attacker_player_id))
+                        )
+                        attacker = attacker_row.scalar_one_or_none()
+                        if attacker:
+                            attacker.total_damage += out["damage"]
+                            await db.commit()
+
+                        # Broadcast immediately — client sees result before NPC thinks
+                        await room.broadcast({
+                            "type": "attack",
+                            "sender": player_id,
+                            "original_text": text,
+                            "display_text": out["ref_display_text"],
+                            "damage": out["damage"],
+                            "referee_comment": out["ref_comment"],
+                            "hp_status": dict(room.hp),
                             "current_turn": room.current_turn,
-                        }
-                    )
+                        })
+
+                        if out.get("game_over"):
+                            await _do_game_over(
+                                session, db, room, match_id, is_npc,
+                                out, player_id, attacker_player_id,
+                            )
+
+                    elif node_name == "npc_generate":
+                        # ── NPC words ready, referee still scoring ────────────
+                        _npc_pending_text = out["npc_text"]
+                        print(
+                            f"[WS PROCESS] NPC typing: {_npc_pending_text[:30]}...",
+                            flush=True,
+                        )
+                        # Show NPC text immediately as a pending bubble;
+                        # npc_score will follow shortly with damage + HP update.
+                        await room.broadcast({
+                            "type": "npc_typing",
+                            "npc_text": _npc_pending_text,
+                        })
+
+                    elif node_name == "npc_score":
+                        # ── NPC damage + referee comment ready ────────────────
+                        room.hp = dict(out["hp"])
+                        room.round_number = out["round_number"]
+                        room.current_turn = out.get("current_turn") or player_id
+
+                        # npc_text came from npc_generate (carried via _npc_pending_text)
+                        npc_text = _npc_pending_text
+
+                        print(
+                            f"[WS PROCESS] NPC scored: damage={out['npc_damage']}, "
+                            f"comment={out['npc_ref_comment']}", flush=True,
+                        )
+
+                        await _persist_round(
+                            db, match_id, out["round_number"],
+                            None, npc_text, None,
+                            out["npc_ref_display_text"], out["npc_damage"],
+                            out["npc_ref_comment"], dict(room.hp),
+                        )
+
+                        # Replace pending NPC bubble with full result + referee banner
+                        await room.broadcast({
+                            "type": "npc_attack",
+                            "npc_text": npc_text,
+                            "display_text": out["npc_ref_display_text"],
+                            "damage": out["npc_damage"],
+                            "referee_comment": out["npc_ref_comment"],
+                            "hp_status": dict(room.hp),
+                            "current_turn": room.current_turn,
+                        })
+
+                        if out.get("game_over"):
+                            await _do_game_over(
+                                session, db, room, match_id, is_npc,
+                                out, player_id, attacker_player_id,
+                            )
 
             except Exception as round_err:
                 import traceback

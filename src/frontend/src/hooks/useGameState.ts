@@ -19,6 +19,7 @@ export function useGameState(myPlayerId: string) {
       id: nextId(), kind: 'attack', sender: myPlayerId,
       displayText: text, damage: 0, isNpc: false, isPending: true,
     }])
+    setCurrentTurn('')  // lock input immediately; server will restore on attack/npc_attack message
   }, [myPlayerId])
 
   const handleMessage = useCallback((msg: ServerMessage) => {
@@ -48,15 +49,25 @@ export function useGameState(myPlayerId: string) {
           { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
         ])
       }
+    } else if (msg.type === 'npc_typing') {
+      // NPC words arrived before referee scores — show pending bubble
+      setChatLog(prev => [...prev,
+        { id: nextId(), kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: 0, isNpc: true, isPending: true },
+      ])
     } else if (msg.type === 'npc_attack') {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
       setLastDamageEvent({ damage: msg.damage, id: nextId() })
-      const attackId = nextId()
-      setChatLog(prev => [...prev,
-        { id: attackId, kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: msg.damage, isNpc: true },
-        { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
-      ])
+      // Replace pending NPC bubble (from npc_typing) with final scored result
+      setChatLog(prev => {
+        const withoutPending = prev.filter(
+          e => !(e.kind === 'attack' && e.isPending && e.sender === 'NPC')
+        )
+        return [...withoutPending,
+          { id: nextId(), kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: msg.damage, isNpc: true },
+          { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
+        ]
+      })
     } else if (msg.type === 'game_over') {
       setGameOver(msg.winner)
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: msg.message }])

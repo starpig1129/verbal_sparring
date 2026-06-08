@@ -243,32 +243,43 @@ async def _node_score_player_attack(
     }
 
 
-async def _node_npc_turn(
+async def _node_npc_generate(
     state: BattleState, config: RunnableConfig
 ) -> dict:
-    """Generate NPC attack (from message history), score it, update HP."""
+    """Generate NPC counter-attack text and add it to conversation history.
+
+    Yields early so the caller can broadcast the NPC's words before scoring.
+    """
     db: AsyncSession = config["configurable"]["db"]
+    npc_text = await _generate_npc_attack(state, db)
+    return {
+        "messages": [AIMessage(content=npc_text)],  # add_messages appends
+        "npc_text": npc_text,
+    }
+
+
+async def _node_npc_score(
+    state: BattleState, config: RunnableConfig
+) -> dict:
+    """Score the NPC's attack (already in state.npc_text), apply damage."""
     player_id = state["player_id"]
+    npc_text = state["npc_text"]
     npc_hp = state["hp"].get("NPC", 100)
     player_hp = state["hp"].get(player_id, 100)
     round_num = state["round_number"] + 1
 
-    npc_text = await _generate_npc_attack(state, db)
+    # Exclude the NPC message we just appended (last entry) from referee context
+    recent = list(state["messages"][:-1])[-4:]
 
-    scored = await _score(
-        npc_text, "NPC", npc_hp, player_hp, round_num,
-        list(state["messages"])[-4:],
-    )
+    scored = await _score(npc_text, "NPC", npc_hp, player_hp, round_num, recent)
 
     new_hp = dict(state["hp"])
     new_hp[player_id] = max(0, player_hp - scored["damage"])
     game_over = new_hp[player_id] <= 0
 
     return {
-        "messages": [AIMessage(content=npc_text)],  # add_messages appends this
         "hp": new_hp,
         "round_number": round_num,
-        "npc_text": npc_text,
         "npc_damage": scored["damage"],
         "npc_ref_comment": scored["comment"],
         "npc_ref_display_text": scored["display_text"],
@@ -281,7 +292,7 @@ async def _node_npc_turn(
 def _route_after_player_attack(state: BattleState) -> str:
     if state["game_over"] or not state["is_npc_match"]:
         return END
-    return "npc_turn"
+    return "npc_generate"
 
 
 # ── Graph ─────────────────────────────────────────────────────────────────────
@@ -289,14 +300,16 @@ def _route_after_player_attack(state: BattleState) -> str:
 def _compile_graph(checkpointer: MemorySaver):
     g = StateGraph(BattleState)
     g.add_node("score_player_attack", _node_score_player_attack)
-    g.add_node("npc_turn", _node_npc_turn)
+    g.add_node("npc_generate", _node_npc_generate)
+    g.add_node("npc_score", _node_npc_score)
     g.set_entry_point("score_player_attack")
     g.add_conditional_edges(
         "score_player_attack",
         _route_after_player_attack,
-        {"npc_turn": "npc_turn", END: END},
+        {"npc_generate": "npc_generate", END: END},
     )
-    g.add_edge("npc_turn", END)
+    g.add_edge("npc_generate", "npc_score")
+    g.add_edge("npc_score", END)
     return g.compile(checkpointer=checkpointer)
 
 
@@ -429,6 +442,66 @@ class BattleSession:
             "winner": None,
         }
 
+    async def process_attack_streaming(
+        self,
+        attack_text: str,
+        attacker_id: str,
+        db: AsyncSession,
+        image_b64: str | None = None,
+        sender_display: str | None = None,
+    ):
+        """Yield (node_name, node_output) as each graph node completes.
+
+        Callers can broadcast results immediately after each yield rather than
+        waiting for the entire graph (scorer + NPC turn) to finish.
+
+        Yields:
+            ("score_player_attack", node_output_dict)
+            ("npc_generate", node_output_dict)  # NPC words, before scoring
+            ("npc_score",    node_output_dict)  # damage + referee comment
+        """
+        config: RunnableConfig = {"configurable": {"thread_id": self._thread_id, "db": db}}
+        turn_input = self._build_turn_input(attack_text, attacker_id, image_b64, sender_display)
+
+        async for chunk in self._graph.astream(turn_input, config=config, stream_mode="updates"):
+            node_name = next(iter(chunk))
+            node_output = chunk[node_name]
+            yield (node_name, node_output)
+
+        # Sync _last_messages from checkpoint so get_messages() is accurate
+        try:
+            snapshot = self._graph.get_state({"configurable": {"thread_id": self._thread_id}})
+            if snapshot and snapshot.values:
+                self._last_messages = list(snapshot.values.get("messages", []))
+        except Exception:
+            pass
+
+    def _build_turn_input(
+        self,
+        attack_text: str,
+        attacker_id: str,
+        image_b64: str | None,
+        sender_display: str | None,
+    ) -> dict:
+        """Build the input dict for a graph invocation and mark as initialized."""
+        is_npc = self._initial_state["is_npc_match"]
+        label = sender_display or attacker_id
+        msg_content = (
+            attack_text or "（圖片）"
+            if is_npc
+            else f"[{label}] {attack_text or '（圖片）'}"
+        )
+        turn_input: dict = {
+            "messages": [HumanMessage(content=msg_content)],
+            "attack_text": attack_text,
+            "attack_image": image_b64,
+            "attacker_id": attacker_id,
+        }
+        if not self._initialized:
+            turn_input = {**self._initial_state, **turn_input}
+            self._initialized = True
+        return turn_input
+
     async def process_attack(
         self,
         attack_text: str,
@@ -437,47 +510,9 @@ class BattleSession:
         image_b64: str | None = None,
         sender_display: str | None = None,
     ) -> BattleState:
-        """Process one player's attack through the persistent battle graph.
-
-        For NPC matches the message is added as HumanMessage(text).
-        For PvP matches it is labelled: HumanMessage("[SenderName] text").
-
-        Args:
-            attack_text: The player's raw attack text.
-            attacker_id: UUID string of the attacking player.
-            db: Async SQLAlchemy session for NPC memory operations.
-            image_b64: Optional base-64 encoded image.
-            sender_display: Display name shown in PvP dialogue labels.
-
-        Returns:
-            Final BattleState after this turn (including NPC counter if applicable).
-        """
-        config: RunnableConfig = {
-            "configurable": {
-                "thread_id": self._thread_id,
-                "db": db,
-            }
-        }
-
-        is_npc = self._initial_state["is_npc_match"]
-        label = sender_display or attacker_id
-        msg_content = (
-            attack_text or "（圖片）"
-            if is_npc
-            else f"[{label}] {attack_text or '（圖片）'}"
-        )
-
-        turn_input: dict = {
-            "messages": [HumanMessage(content=msg_content)],
-            "attack_text": attack_text,
-            "attack_image": image_b64,
-            "attacker_id": attacker_id,
-        }
-
-        if not self._initialized:
-            turn_input = {**self._initial_state, **turn_input}
-            self._initialized = True
-
+        """Process one player's attack and return the final BattleState."""
+        config: RunnableConfig = {"configurable": {"thread_id": self._thread_id, "db": db}}
+        turn_input = self._build_turn_input(attack_text, attacker_id, image_b64, sender_display)
         result = await self._graph.ainvoke(turn_input, config=config)
         self._last_messages = list(result.get("messages", []))
         return result

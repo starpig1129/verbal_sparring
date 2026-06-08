@@ -18,7 +18,7 @@ test('attack message adds attack + referee entries to chatLog', () => {
   const { result } = renderHook(() => useGameState('alice'))
   act(() => {
     result.current.handleMessage({
-      type: 'attack', sender: 'bob', display_text: '你好遜！',
+      type: 'attack', sender: 'bob', original_text: '你好遜！', display_text: '你好遜！',
       damage: 25, referee_comment: '猛',
       hp_status: { alice: 75, bob: 100 }, current_turn: 'alice',
     })
@@ -35,7 +35,7 @@ test('attack message sets lastDamageEvent', () => {
   const { result } = renderHook(() => useGameState('alice'))
   act(() => {
     result.current.handleMessage({
-      type: 'attack', sender: 'bob', display_text: 'test',
+      type: 'attack', sender: 'bob', original_text: 'test', display_text: 'test',
       damage: 18, referee_comment: 'ok',
       hp_status: { alice: 82, bob: 100 }, current_turn: 'alice',
     })

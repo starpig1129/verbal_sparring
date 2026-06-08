@@ -93,6 +93,15 @@ services:
     depends_on:
       - backend
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    volumes:
+      - ${CLOUDFLARED_DIR:-~/.cloudflared}:/etc/cloudflared
+    command: tunnel --config /etc/cloudflared/config.yml run vs-tunnel
+    restart: always
+    depends_on:
+      - backend
+
 volumes:
   pg_data_dev:
   hf_cache:

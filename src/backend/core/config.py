@@ -45,9 +45,32 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=_ENV_FILE, extra="ignore", protected_namespaces=())
 
 
-# Initialize settings with YAML defaults.
-# Environment variables and .env file will automatically take higher precedence.
-settings = Settings(**_yaml_defaults)
+# Precedence merger: settings.yaml (lowest) < .env file < os.environ (highest)
+_merged_config = {}
+
+# 1. Apply yaml defaults
+for k, v in _yaml_defaults.items():
+    _merged_config[k.lower()] = v
+
+# 2. Apply .env overrides
+_env_path = Path(_ENV_FILE)
+if _env_path.exists():
+    with open(_env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                val = val.strip().strip("'\"")
+                _merged_config[key.strip().lower()] = val
+
+# 3. Apply os.environ overrides
+for k, v in os.environ.items():
+    _merged_config[k.lower()] = v
+
+# Initialize settings with merged configurations.
+settings = Settings(**_merged_config)
 
 # Resolve prompts YAML path (convert to absolute if relative)
 _prompts_path = Path(settings.prompts_yaml_path)

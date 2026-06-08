@@ -30,3 +30,4 @@ src/backend/.env
 node_modules/
 src/frontend/node_modules/
 src/frontend/dist/
+.superpowers/

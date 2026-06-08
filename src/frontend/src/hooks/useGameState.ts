@@ -28,8 +28,8 @@ export function useGameState(myPlayerId: string) {
       }
       const attackId = nextId()
       setChatLog(prev => [...prev,
-        { id: attackId, kind: 'attack', sender: msg.sender, displayText: msg.display_text, damage: msg.damage, isNpc: false },
-        { id: nextId(), kind: 'referee', displayText: msg.referee_comment },
+        { id: attackId, kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
+        { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
       ])
     } else if (msg.type === 'npc_attack') {
       setHp(msg.hp_status)

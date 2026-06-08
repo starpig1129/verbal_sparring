@@ -252,6 +252,7 @@ async def battle_ws(
                     {
                         "type": "attack",
                         "sender": player_id,
+                        "original_text": text,
                         "display_text": display_text,
                         "damage": damage,
                         "referee_comment": comment,

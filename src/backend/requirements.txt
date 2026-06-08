@@ -5,7 +5,8 @@ asyncpg==0.30.0
 psycopg2-binary>=2.9.9
 alembic==1.14.0
 langgraph==0.2.50
-langchain-ollama==0.2.1
+langchain-openai>=0.2.0
+langchain-ollama>=0.2.1
 python-jose[cryptography]==3.3.0
 bcrypt>=4.0.1
 pydantic-settings==2.6.1

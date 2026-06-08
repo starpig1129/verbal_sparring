@@ -28,13 +28,6 @@ def test_is_full_human_vs_human():
     assert room.is_full() is True
 
 
-def test_record_attack_keeps_last_3():
-    room = GameRoom(match_id="m")
-    for i in range(5):
-        room.record_attack(f"attack{i}")
-    assert room.recent_attacks == ["attack2", "attack3", "attack4"]
-
-
 def test_reset_restores_hp():
     room = GameRoom(match_id="m")
     room.connect("alice", MagicMock())

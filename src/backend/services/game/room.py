@@ -17,7 +17,8 @@ class GameRoom:
         hp: Mapping of player_id to current HP value.
         current_turn: player_id whose turn it is to attack next.
         round_number: How many rounds have completed so far.
-        recent_attacks: Sliding window of the last three attack texts.
+
+    Note: Dialogue history and attack tracking are managed by BattleSession.
     """
 
     match_id: str
@@ -26,7 +27,6 @@ class GameRoom:
     hp: dict[str, int] = field(default_factory=dict)
     current_turn: str = ""
     round_number: int = 0
-    recent_attacks: list[str] = field(default_factory=list)
 
     def connect(self, player_id: str, ws: WebSocket) -> None:
         """Register a player's WebSocket and initialise their HP if needed.
@@ -79,16 +79,6 @@ class GameRoom:
             return len(self.connections) >= 1
         return len(self.connections) >= 2
 
-    def record_attack(self, text: str) -> None:
-        """Append an attack text to the sliding window of recent attacks.
-
-        Keeps only the last three entries.
-
-        Args:
-            text: Attack description or display text to record.
-        """
-        self.recent_attacks = [*self.recent_attacks, text][-3:]
-
     def reset(self) -> None:
         """Reset HP, turn order, and round counter for a new game session.
 
@@ -98,7 +88,6 @@ class GameRoom:
         self.hp = {p: 100 for p in self.connections}
         self.current_turn = sorted(self.connections.keys())[0] if self.connections else ""
         self.round_number = 0
-        self.recent_attacks = []
 
 
 rooms: dict[str, GameRoom] = {}

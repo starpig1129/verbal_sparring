@@ -12,9 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.backend.core.database import get_session
 from src.backend.models import GameRound, Match, MatchStatus, Player
 from src.backend.services.auth import decode_token
+from src.backend.services.game.battle_session import (
+    analyze_and_update_player_memory,
+    create_battle_session,
+    destroy_battle_session,
+    get_battle_session,
+)
 from src.backend.services.game.room import GameRoom, rooms
-from src.backend.services.npc.agent import run_npc_turn, update_npc_memory
-from src.backend.services.referee.graph import run_referee
 
 router = APIRouter()
 
@@ -31,20 +35,7 @@ async def _persist_round(
     referee_comment: str,
     hp_snapshot: dict,
 ) -> None:
-    """Persist a single round's result to the database.
-
-    Args:
-        db: Async SQLAlchemy session.
-        match_id: UUID string of the owning match.
-        round_number: Sequential round counter within the match.
-        attacker_id: UUID string of the attacking player, or None for NPC.
-        original_text: The raw text the attacker submitted.
-        image_b64: Optional base-64 image attached to the attack.
-        display_text: Referee-rewritten sarcastic version of the attack.
-        damage: Clamped damage value (10–30).
-        referee_comment: Short sarcastic comment from the referee.
-        hp_snapshot: Dict mapping player_id to HP after this round.
-    """
+    """Persist a single round's result to the database."""
     rnd = GameRound(
         match_id=uuid.UUID(match_id),
         round_number=round_number,
@@ -63,13 +54,7 @@ async def _persist_round(
 async def _finish_match(
     db: AsyncSession, match_id: str, winner_id: str | None
 ) -> None:
-    """Mark a match as finished and increment the winner's win count.
-
-    Args:
-        db: Async SQLAlchemy session.
-        match_id: UUID string of the match to finalise.
-        winner_id: UUID string of the winning player, or None if the NPC won.
-    """
+    """Mark a match as finished and increment the winner's win count."""
     result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
     match = result.scalar_one_or_none()
     if match:
@@ -111,13 +96,6 @@ async def battle_ws(
         - ``npc_attack``: Result of an NPC auto-attack.
         - ``game_over``: Match concluded; includes the winner.
         - ``turn_error``: Sent only to the player who attacked out of turn.
-
-    Args:
-        websocket: The incoming WebSocket connection.
-        match_id: UUID string of the target match (path parameter).
-        player_id: Display identifier used within the room (path parameter).
-        token: JWT access token passed as a query parameter.
-        db: Injected async database session.
     """
     print(f"[WS INFO] Player {player_id} is connecting to match {match_id}...", flush=True)
 
@@ -167,23 +145,21 @@ async def battle_ws(
         }
     )
 
+    # JWT sub is the canonical UUID for DB operations
     attacker_player_id = payload["sub"]
 
     try:
         while True:
             raw = await websocket.receive_text()
             print(f"[WS RECEIVED] Message from {player_id}: {raw}", flush=True)
-            
+
             try:
                 payload_data = json.loads(raw)
             except Exception as e:
                 print(f"[WS ERROR] Failed to parse JSON from {player_id}: {e}", flush=True)
                 await room.send_to(
                     player_id,
-                    {
-                        "type": "error",
-                        "message": "無效的攻擊格式 (JSON 解析失敗)",
-                    },
+                    {"type": "error", "message": "無效的攻擊格式 (JSON 解析失敗)"},
                 )
                 continue
 
@@ -191,7 +167,11 @@ async def battle_ws(
             image_b64 = payload_data.get("image")
 
             if player_id != room.current_turn:
-                print(f"[WS WARNING] Player {player_id} tried to attack out of turn (current: {room.current_turn})", flush=True)
+                print(
+                    f"[WS WARNING] Player {player_id} tried to attack out of turn "
+                    f"(current: {room.current_turn})",
+                    flush=True,
+                )
                 await room.send_to(
                     player_id,
                     {
@@ -207,46 +187,58 @@ async def battle_ws(
                 continue
 
             try:
-                print(f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...", flush=True)
-                room.round_number += 1
-                room.record_attack(text or "（圖片）")
+                print(
+                    f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...",
+                    flush=True,
+                )
 
-                # Determine target for HP context before calling referee
-                if is_npc:
-                    ref_target = "NPC"
-                else:
-                    other = [p for p in room.hp if p != player_id]
-                    ref_target = other[0] if other else player_id
+                # Get or create the persistent BattleSession for this match
+                session = get_battle_session(match_id)
+                if not session:
+                    session = create_battle_session(
+                        match_id=match_id,
+                        player_id=player_id,
+                        player_uuid=attacker_player_id,
+                        is_npc=is_npc,
+                        initial_hp=dict(room.hp),
+                    )
 
-                ref_context = {
-                    "round_number": room.round_number,
-                    "attacker_name": player_id,
-                    "attacker_hp": room.hp.get(player_id, 100),
-                    "defender_hp": room.hp.get(ref_target, 100),
-                    "recent_exchanges": list(room.recent_attacks),
-                }
+                # Process attack through the persistent LangGraph
+                state = await session.process_attack(
+                    attack_text=text,
+                    attacker_id=player_id,
+                    db=db,
+                    image_b64=image_b64,
+                    sender_display=player_id,
+                )
 
-                # Run referee (with robust timeout and fallback inside)
-                ref = await run_referee(text, image_b64, ref_context)
-                damage = ref["damage"]
-                comment = ref["comment"]
-                display_text = ref["display_text"]
-                print(f"[WS PROCESS] Referee output - Damage: {damage}, Comment: {comment}, DisplayText: {display_text}", flush=True)
+                # Sync room state from BattleState
+                room.hp = dict(state["hp"])
+                room.round_number = state["round_number"]
+                room.current_turn = state["current_turn"] or player_id
 
-                target = ref_target
+                # Detect whether the NPC also took a turn this invocation
+                npc_attacked = is_npc and bool(state.get("npc_text"))
 
-                room.hp[target] = max(0, room.hp[target] - damage)
+                # Round numbers: player round incremented first, NPC round is one higher
+                player_round = state["round_number"] - (1 if npc_attacked else 0)
 
+                print(
+                    f"[WS PROCESS] Referee: damage={state['damage']}, "
+                    f"comment={state['ref_comment']}", flush=True,
+                )
+
+                # ── Persist & broadcast player's attack ───────────────────────
                 await _persist_round(
                     db,
                     match_id,
-                    room.round_number,
+                    player_round,
                     attacker_player_id,
                     text,
                     image_b64,
-                    display_text,
-                    damage,
-                    comment,
+                    state["ref_display_text"],
+                    state["damage"],
+                    state["ref_comment"],
                     dict(room.hp),
                 )
 
@@ -255,35 +247,90 @@ async def battle_ws(
                 )
                 attacker = attacker_result.scalar_one_or_none()
                 if attacker:
-                    attacker.total_damage += damage
+                    attacker.total_damage += state["damage"]
                     await db.commit()
 
-                room.current_turn = target
                 await room.broadcast(
                     {
                         "type": "attack",
                         "sender": player_id,
                         "original_text": text,
-                        "display_text": display_text,
-                        "damage": damage,
-                        "referee_comment": comment,
+                        "display_text": state["ref_display_text"],
+                        "damage": state["damage"],
+                        "referee_comment": state["ref_comment"],
                         "hp_status": dict(room.hp),
                         "current_turn": room.current_turn,
                     }
                 )
 
-                if room.hp[target] <= 0:
-                    print(f"[WS MATCH OVER] Player {player_id} defeated {target}", flush=True)
-                    await _finish_match(db, match_id, attacker_player_id)
+                # ── Persist & broadcast NPC attack (if it happened) ───────────
+                if npc_attacked:
+                    print(
+                        f"[WS PROCESS] NPC attack: {state['npc_text'][:30]}...",
+                        flush=True,
+                    )
+                    await _persist_round(
+                        db,
+                        match_id,
+                        state["round_number"],
+                        None,
+                        state["npc_text"],
+                        None,
+                        state["npc_ref_display_text"],
+                        state["npc_damage"],
+                        state["npc_ref_comment"],
+                        dict(room.hp),
+                    )
+                    await room.broadcast(
+                        {
+                            "type": "npc_attack",
+                            "display_text": state["npc_ref_display_text"],
+                            "damage": state["npc_damage"],
+                            "referee_comment": state["npc_ref_comment"],
+                            "hp_status": dict(room.hp),
+                            "current_turn": room.current_turn,
+                        }
+                    )
+
+                # ── Handle game over ──────────────────────────────────────────
+                if state["game_over"]:
+                    winner_key = state["winner"]  # URL-param player_id or "NPC"
+                    winner_uuid = attacker_player_id if winner_key == player_id else None
+                    print(
+                        f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})",
+                        flush=True,
+                    )
+
+                    # Collect messages before destroying session
+                    battle_messages = session.get_messages()
+                    destroy_battle_session(match_id)
+
+                    if is_npc:
+                        damage_to_npc = 100 - max(0, state["hp"].get("NPC", 0))
+                        asyncio.create_task(
+                            analyze_and_update_player_memory(
+                                db,
+                                attacker_player_id,
+                                battle_messages,
+                                damage_to_npc,
+                                state["round_number"],
+                            )
+                        )
+
+                    await _finish_match(db, match_id, winner_uuid)
                     await room.broadcast(
                         {
                             "type": "game_over",
-                            "message": f"【{player_id}】把對手噴到生活不能自理！",
-                            "winner": player_id,
+                            "message": (
+                                f"【{winner_key}】把對手噴到生活不能自理！"
+                                if winner_key != "NPC"
+                                else "AI 裁判：就這點實力？"
+                            ),
+                            "winner": winner_key,
                         }
                     )
                     room.reset()
-                    if is_npc and "NPC" not in room.hp:
+                    if is_npc:
                         room.hp["NPC"] = 100
                     await room.broadcast(
                         {
@@ -293,92 +340,14 @@ async def battle_ws(
                             "current_turn": room.current_turn,
                         }
                     )
-                    continue
-
-                if is_npc:
-                    # Update NPC memory with every player attack so context builds up
-                    try:
-                        asyncio.create_task(
-                            update_npc_memory(
-                                db,
-                                attacker_player_id,
-                                text or None,
-                                damage,
-                            )
-                        )
-                    except RuntimeError:
-                        pass
-
-                if is_npc and room.current_turn == "NPC":
-                    print(f"[WS PROCESS] Running NPC turn vs {player_id}...", flush=True)
-                    npc_text = await run_npc_turn(
-                        db=db,
-                        match_id=match_id,
-                        opponent_id=attacker_player_id,
-                        my_hp=room.hp.get("NPC", 100),
-                        opponent_hp=room.hp.get(player_id, 100),
-                        round_number=room.round_number,
-                        recent_opponent_attacks=room.recent_attacks,
-                    )
-                    print(f"[WS PROCESS] NPC attack generated: {npc_text}", flush=True)
-
-                    npc_context = {
-                        "round_number": room.round_number + 1,
-                        "attacker_name": "NPC",
-                        "attacker_hp": room.hp.get("NPC", 100),
-                        "defender_hp": room.hp.get(player_id, 100),
-                        "recent_exchanges": list(room.recent_attacks),
-                    }
-                    npc_ref = await run_referee(npc_text, None, npc_context)
-                    npc_damage = npc_ref["damage"]
-                    npc_comment = npc_ref["comment"]
-                    npc_display_text = npc_ref["display_text"]
-                    
-                    room.hp[player_id] = max(0, room.hp.get(player_id, 100) - npc_damage)
-                    room.round_number += 1
-
-                    await _persist_round(
-                        db,
-                        match_id,
-                        room.round_number,
-                        None,
-                        npc_text,
-                        None,
-                        npc_display_text,
-                        npc_damage,
-                        npc_comment,
-                        dict(room.hp),
-                    )
-
-                    room.current_turn = player_id
-                    await room.broadcast(
-                        {
-                            "type": "npc_attack",
-                            "display_text": npc_ref["display_text"],
-                            "damage": npc_ref["damage"],
-                            "referee_comment": npc_ref["comment"],
-                            "hp_status": dict(room.hp),
-                            "current_turn": room.current_turn,
-                        }
-                    )
-
-                    if room.hp.get(player_id, 100) <= 0:
-                        print(f"[WS MATCH OVER] NPC defeated player {player_id}", flush=True)
-                        await _finish_match(db, match_id, None)
-                        await room.broadcast(
-                            {
-                                "type": "game_over",
-                                "message": "AI 裁判：就這點實力？",
-                                "winner": "NPC",
-                            }
-                        )
-                        room.reset()
-                        if "NPC" not in room.hp:
-                            room.hp["NPC"] = 100
 
             except Exception as round_err:
                 import traceback
-                print(f"[WS ROUND ERROR] Error processing attack round: {round_err}", flush=True)
+
+                print(
+                    f"[WS ROUND ERROR] Error processing attack round: {round_err}",
+                    flush=True,
+                )
                 traceback.print_exc()
                 await room.send_to(
                     player_id,
@@ -390,10 +359,14 @@ async def battle_ws(
                 continue
 
     except WebSocketDisconnect:
-        print(f"[WS INFO] Player {player_id} disconnected from match {match_id}", flush=True)
+        print(
+            f"[WS INFO] Player {player_id} disconnected from match {match_id}",
+            flush=True,
+        )
         room.disconnect(player_id)
         if not room.connections:
             rooms.pop(match_id, None)
+            destroy_battle_session(match_id)
         else:
             await room.broadcast(
                 {

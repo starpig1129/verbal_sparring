@@ -1,21 +1,18 @@
-"""LangGraph-based NPC agent for the verbal sparring game.
-
-The agent uses a single-node graph that calls Ollama to generate a taunt
-attack based on the current game state and persisted opponent memory.
-Memory is loaded from PostgreSQL before the graph runs and can be updated
-after each turn via :func:`update_npc_memory`.
-"""
+"""LangGraph-based NPC agent for the verbal sparring game."""
 
 import uuid
 from typing import TypedDict
 
-import httpx
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.backend.core.config import settings, NPC_SYSTEM_PROMPT
+from src.backend.core.config import NPC_SYSTEM_PROMPT, make_chat_llm, settings
 from src.backend.models import NpcMemory
+
+# Module-level LLM instance shared across all NPC invocations.
+_llm = make_chat_llm("player", settings.player_temperature)
 
 
 class NPCState(TypedDict):
@@ -27,7 +24,8 @@ class NPCState(TypedDict):
         my_hp: NPC's current HP.
         opponent_hp: Opponent's current HP.
         round_number: Current round number (1-indexed).
-        recent_opponent_attacks: Recent attack texts from the opponent.
+        recent_opponent_attacks: Recent attack texts from the human player (pattern window).
+        dialogue_history: Full alternating conversation log with speaker labels.
         memory: Opponent memory dict loaded from the database.
         attack_text: Generated attack text (populated by the graph node).
     """
@@ -38,114 +36,63 @@ class NPCState(TypedDict):
     opponent_hp: int
     round_number: int
     recent_opponent_attacks: list[str]
+    dialogue_history: list[dict]
     memory: dict
     attack_text: str
 
 
-async def _call_ollama(messages: list[dict]) -> str:
-    """Send a chat request to the configured LLM provider and return the assistant content.
-
-    Supports both Ollama and OpenAI-compatible vLLM endpoints based on settings.model_provider.
-
-    Args:
-        messages: List of chat message dicts with "role" and "content" keys.
-
-    Returns:
-        Stripped string content of the assistant's reply.
-
-    Raises:
-        httpx.HTTPStatusError: If the API returns a non-2xx response.
-    """
-    if settings.model_provider == "vllm":
-        payload = {
-            "model": settings.vllm_player_model,
-            "messages": messages,
-            "stream": False,
-            "temperature": settings.player_temperature,
-        }
-        async with httpx.AsyncClient(timeout=5.0) as c:
-            resp = await c.post(f"{settings.vllm_url}/v1/chat/completions", json=payload)
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"].strip()
-    else:
-        payload = {
-            "model": settings.ollama_player_model,
-            "messages": messages,
-            "stream": False,
-            "options": {"temperature": settings.player_temperature},
-        }
-        async with httpx.AsyncClient(timeout=5.0) as c:
-            resp = await c.post(f"{settings.ollama_url}/api/chat", json=payload)
-            resp.raise_for_status()
-            return resp.json()["message"]["content"].strip()
-
-
-def _build_npc_messages(state: NPCState) -> list[dict]:
-    """Construct the Ollama chat messages list for the NPC's turn.
-
-    Incorporates the opponent memory summary and recent attacks into the
-    prompt so the NPC can adapt its strategy.
+def _build_npc_messages(state: NPCState) -> list:
+    """Build a LangChain message list for the NPC's turn.
 
     Args:
         state: Current NPCState with all game context populated.
 
     Returns:
-        List of message dicts ready to send to the Ollama chat API.
+        List of LangChain BaseMessage objects ready for llm.ainvoke().
     """
     mem = state["memory"]
-    memory_summary = ""
+    memory_hint = ""
     if mem.get("round_count", 0) > 0:
-        patterns = "、".join(mem.get("attack_patterns", [])[:3]) or "無特殊模式"
-        weaknesses = "、".join(mem.get("weaknesses", [])[:3]) or "未知弱點"
-        memory_summary = (
-            f"\n對手習慣：{patterns}\n對手弱點：{weaknesses}\n歷史場數：{mem['round_count']}"
-        )
+        patterns = ", ".join(mem.get("attack_patterns", [])[:3])
+        if patterns:
+            memory_hint = f"\n[Long-term opponent patterns]: {patterns}"
 
-    recent = "、".join(state["recent_opponent_attacks"][-3:]) or "無"
     situation = (
-        f"當前戰況：我方HP {state['my_hp']} vs 對手HP {state['opponent_hp']}，"
-        f"第 {state['round_number']} 回合。"
-        f"對手最近攻擊：「{recent}」。"
-        f"{memory_summary}"
+        f"[Round {state['round_number']} | NPC HP: {state['my_hp']} | "
+        f"Opponent HP: {state['opponent_hp']}]"
+        f"{memory_hint}"
     )
+
+    history = state.get("dialogue_history", [])
+    dialogue_block = ""
+    if history:
+        lines = "\n".join(
+            f'- {e["speaker"]}: "{e["text"]}"' for e in history[-4:]
+        )
+        dialogue_block = f"\n[Recent battle dialogue]:\n{lines}"
+
     return [
-        {"role": "user", "content": f"{NPC_SYSTEM_PROMPT}\n\n{situation}\n\n生成你這回合的攻擊："},
+        SystemMessage(content=NPC_SYSTEM_PROMPT),
+        HumanMessage(content=f"{situation}{dialogue_block}\n\nGenerate your attack now:"),
     ]
 
 
-async def _node_call_ollama(state: NPCState) -> dict:
-    """LangGraph node: call Ollama and store the generated attack in state.
-
-    Args:
-        state: Current NPCState with game context and opponent memory.
-
-    Returns:
-        Partial state dict containing only the ``attack_text`` key.
-    """
+async def _node_call_llm(state: NPCState) -> dict:
+    """LangGraph node: invoke the LLM and store the generated attack in state."""
     msgs = _build_npc_messages(state)
-    text = await _call_ollama(msgs)
-    return {"attack_text": text}
+    response = await _llm.ainvoke(msgs)
+    return {"attack_text": response.content.strip()}
 
 
 _graph = StateGraph(NPCState)
-_graph.add_node("call_ollama", _node_call_ollama)
-_graph.set_entry_point("call_ollama")
-_graph.add_edge("call_ollama", END)
+_graph.add_node("call_llm", _node_call_llm)
+_graph.set_entry_point("call_llm")
+_graph.add_edge("call_llm", END)
 _npc_graph = _graph.compile()
 
 
 async def _get_memory(db: AsyncSession, opponent_id: str) -> dict:
-    """Load the NPC's memory about the given opponent from the database.
-
-    Args:
-        db: Async SQLAlchemy session.
-        opponent_id: UUID string of the opponent player.
-
-    Returns:
-        Dict with keys ``attack_patterns``, ``weaknesses``,
-        ``avg_damage_recv``, and ``round_count``.  Returns an empty dict
-        when no memory record exists yet for this opponent.
-    """
+    """Load the NPC's memory about the given opponent from the database."""
     result = await db.execute(
         select(NpcMemory).where(NpcMemory.opponent_id == uuid.UUID(opponent_id))
     )
@@ -168,13 +115,10 @@ async def update_npc_memory(
 ) -> None:
     """Update (or create) the NPC's memory record for the given opponent.
 
-    Updates the running average damage received and appends a newly
-    observed attack pattern (capped to the last 10 patterns).
-
     Args:
         db: Async SQLAlchemy session.
         opponent_id: UUID string of the opponent player.
-        new_pattern: A newly observed attack pattern descriptor, or None.
+        new_pattern: A newly observed attack pattern text, or None.
         damage_received: Damage the NPC received this round.
     """
     result = await db.execute(
@@ -200,11 +144,9 @@ async def run_npc_turn(
     opponent_hp: int,
     round_number: int,
     recent_opponent_attacks: list[str],
+    dialogue_history: list[dict] | None = None,
 ) -> str:
     """Run a full NPC turn through the LangGraph pipeline.
-
-    Loads the opponent's memory from PostgreSQL, invokes the LangGraph
-    NPC agent, and returns the generated attack text.
 
     Args:
         db: Async SQLAlchemy session.
@@ -213,10 +155,11 @@ async def run_npc_turn(
         my_hp: NPC's current HP.
         opponent_hp: Opponent's current HP.
         round_number: Current round number (1-indexed).
-        recent_opponent_attacks: Recent attack texts from the opponent.
+        recent_opponent_attacks: Recent attack texts from the human player.
+        dialogue_history: Full alternating conversation log with speaker labels.
 
     Returns:
-        Generated attack string from the NPC (up to ~20 Chinese characters).
+        Generated attack string from the NPC.
     """
     try:
         memory = await _get_memory(db, opponent_id)
@@ -227,6 +170,7 @@ async def run_npc_turn(
             "opponent_hp": opponent_hp,
             "round_number": round_number,
             "recent_opponent_attacks": recent_opponent_attacks,
+            "dialogue_history": dialogue_history or [],
             "memory": memory,
             "attack_text": "",
         }
@@ -235,9 +179,9 @@ async def run_npc_turn(
             raise ValueError("Empty response from NPC agent")
         return result["attack_text"]
     except Exception as e:
-        print(f"[NPC ERROR] Failed generating NPC attack: {e}. Running fallback NPC taunt...", flush=True)
+        print(f"[NPC ERROR] LLM call failed: {e}. Using fallback taunt.", flush=True)
         import random
-        npc_taunts = [
+        fallbacks = [
             "就這點實力？我代碼寫得都比你好！",
             "你的攻擊軟綿綿的，是在幫我按摩嗎？",
             "放棄吧，人類的智慧在 AI 面前不堪一擊！",
@@ -245,6 +189,6 @@ async def run_npc_turn(
             "重開機吧，你這局已經沒救了。",
             "我一秒鐘能運算百萬次，你一秒鐘只能發呆一次！",
             "你連當我的訓練集都不配！",
-            "你的嘲諷還不如 404 Page Not Found 有創意。"
+            "你的嘲諷還不如 404 Page Not Found 有創意。",
         ]
-        return random.choice(npc_taunts)
+        return random.choice(fallbacks)

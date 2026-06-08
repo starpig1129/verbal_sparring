@@ -21,17 +21,21 @@ else:
 class Settings(BaseSettings):
     database_url: str
     test_database_url: str = ""
-    
-    # Model configuration settings
-    model_provider: str = "ollama"
+
+    # Select backend: "vllm" or "ollama"
+    model_provider: str = "vllm"
+
+    # vLLM (OpenAI-compatible) settings
+    vllm_url: str = "http://localhost:8001"
+    vllm_api_key: str = "EMPTY"
+    vllm_referee_model: str = "referee-agent"
+    vllm_player_model: str = "player-agent"
+
+    # Ollama settings
     ollama_url: str = "http://localhost:11434"
     ollama_referee_model: str = "gemma4:12b"
     ollama_player_model: str = "gemma4:12b"
-    
-    vllm_url: str = "http://localhost:8001"
-    vllm_referee_model: str = "referee-agent"
-    vllm_player_model: str = "player-agent"
-    
+
     referee_temperature: float = 0.8
     player_temperature: float = 0.9
     
@@ -86,3 +90,47 @@ REFEREE_FEW_SHOTS = [
     (shot["input"], shot["output"]) for shot in _prompts_data["referee"]["few_shots"]
 ]
 NPC_SYSTEM_PROMPT = _prompts_data["npc"]["system_prompt"].strip()
+MEMORY_ANALYSIS_PROMPT = _prompts_data["memory_analysis"]["system_prompt"].strip()
+
+
+def make_chat_llm(model_key: str, temperature: float):
+    """Return a LangChain chat model for the configured provider.
+
+    Selects ChatOpenAI (vLLM) or ChatOllama based on settings.model_provider.
+    Both expose the same LangChain BaseChatModel interface so callers need
+    not know which backend is in use.
+
+    For vLLM, thinking is disabled via extra_body so the model outputs answers
+    directly without emitting chain-of-thought tokens.
+
+    Args:
+        model_key: "referee" or "player" — resolves to the configured model name.
+        temperature: Sampling temperature for this LLM role.
+
+    Returns:
+        A LangChain BaseChatModel instance ready for .ainvoke().
+    """
+    if settings.model_provider == "vllm":
+        from langchain_openai import ChatOpenAI
+        model_name = (
+            settings.vllm_referee_model if model_key == "referee"
+            else settings.vllm_player_model
+        )
+        return ChatOpenAI(
+            base_url=f"{settings.vllm_url}/v1",
+            api_key=settings.vllm_api_key,
+            model=model_name,
+            temperature=temperature,
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        )
+    else:
+        from langchain_ollama import ChatOllama
+        model_name = (
+            settings.ollama_referee_model if model_key == "referee"
+            else settings.ollama_player_model
+        )
+        return ChatOllama(
+            base_url=settings.ollama_url,
+            model=model_name,
+            temperature=temperature,
+        )

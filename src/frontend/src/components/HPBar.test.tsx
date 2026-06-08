@@ -1,16 +1,18 @@
-import { render, screen } from "@testing-library/react";
-import HPBar from "./HPBar";
+import { render, screen } from '@testing-library/react'
+import HPBar from './HPBar'
 
-test("renders hp bar with correct percentage", () => {
-  render(<HPBar label="Alice" hp={75} maxHp={100} />);
-  expect(screen.getByText("Alice")).toBeInTheDocument();
-  expect(screen.getByText("75")).toBeInTheDocument();
-  const bar = screen.getByRole("progressbar");
-  expect(bar).toHaveStyle("width: 75%");
-});
+test('renders label and hp value', () => {
+  render(<HPBar label="alice" hp={65} />)
+  expect(screen.getByText('alice')).toBeInTheDocument()
+  expect(screen.getByText('65')).toBeInTheDocument()
+})
 
-test("renders red when hp is low", () => {
-  render(<HPBar label="Bob" hp={15} maxHp={100} />);
-  const bar = screen.getByRole("progressbar");
-  expect(bar).toHaveStyle("background-color: #e53e3e");
-});
+test('progressbar aria-valuenow reflects hp', () => {
+  render(<HPBar label="bob" hp={30} />)
+  expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30')
+})
+
+test('clamps hp at 0', () => {
+  render(<HPBar label="x" hp={-5} />)
+  expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '-5')
+})

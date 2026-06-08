@@ -59,3 +59,16 @@ class PlayerMatchmakingResponse(BaseModel):
     total_damage: int
     is_online: bool
 
+
+class MatchHistoryEntry(BaseModel):
+    """Details of a played match for public history."""
+
+    match_id: str
+    player1_username: str
+    player2_username: str
+    winner_username: str | None
+    round_count: int
+    total_damage: int
+    timestamp: float
+
+

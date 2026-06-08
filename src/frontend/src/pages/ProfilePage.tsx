@@ -14,7 +14,7 @@ function rankTitle(wins: number) {
 }
 
 export default function ProfilePage() {
-  const { username } = useAuthContext()
+  const { username, token } = useAuthContext()
   const [stats, setStats] = useState<LeaderboardEntry | null>(null)
   const [history, setHistory] = useState<MatchRecord[]>([])
 
@@ -28,13 +28,39 @@ export default function ProfilePage() {
   }, [username])
 
   useEffect(() => {
-    try {
-      const stored: MatchRecord[] = JSON.parse(localStorage.getItem('matchHistory') ?? '[]')
-      setHistory(stored.slice(0, 5))
-    } catch {
-      setHistory([])
-    }
-  }, [])
+    if (!token) return
+    fetch(`${API}/api/matches/history`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to fetch')
+        return r.json()
+      })
+      .then(d => {
+        if (Array.isArray(d)) {
+          const userMatches = d.filter(
+            (m: any) => m.player1_username === username || m.player2_username === username
+          )
+          const formatted: MatchRecord[] = userMatches.map((m: any) => {
+            const opponent = m.player1_username === username ? m.player2_username : m.player1_username
+            const result = m.winner_username === username ? 'win' : 'loss'
+            return {
+              matchId: m.match_id,
+              opponent,
+              result,
+              totalDamage: m.total_damage,
+              roundCount: m.round_count,
+              timestamp: m.timestamp,
+            }
+          })
+          setHistory(formatted.slice(0, 5))
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch profile matches history', err)
+        setHistory([])
+      })
+  }, [username, token])
 
   return (
     <div className="flex-1 bg-gradient-to-b from-[#120f0a] via-[#0a0905] to-[#050403] px-4 py-8 max-w-md mx-auto w-full flex flex-col justify-between min-h-[calc(100vh-60px)]">

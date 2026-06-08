@@ -61,23 +61,49 @@ async def _persist_round(
 async def _finish_match(
     db: AsyncSession, match_id: str, winner_id: str | None
 ) -> None:
-    """Mark a match as finished and increment the winner's win count."""
+    """Mark a match as finished and update wins/losses for the players."""
     result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
     match = result.scalar_one_or_none()
-    if match:
-        match.status = MatchStatus.finished
-        match.winner_id = uuid.UUID(winner_id) if winner_id else None
-        match.ended_at = datetime.now(timezone.utc)
-        await db.commit()
+    if not match:
+        return
+
+    match.status = MatchStatus.finished
+    match.winner_id = uuid.UUID(winner_id) if winner_id else None
+    match.ended_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    p1_id = match.player1_id
+    p2_id = match.player2_id
 
     if winner_id:
-        result = await db.execute(
-            select(Player).where(Player.id == uuid.UUID(winner_id))
-        )
-        winner = result.scalar_one_or_none()
+        w_uuid = uuid.UUID(winner_id)
+        # Winner gets a win
+        w_res = await db.execute(select(Player).where(Player.id == w_uuid))
+        winner = w_res.scalar_one_or_none()
         if winner:
             winner.wins += 1
-            await db.commit()
+
+        # Loser gets a loss
+        loser_uuid = None
+        if p1_id == w_uuid:
+            loser_uuid = p2_id
+        elif p2_id == w_uuid:
+            loser_uuid = p1_id
+
+        if loser_uuid:
+            l_res = await db.execute(select(Player).where(Player.id == loser_uuid))
+            loser = l_res.scalar_one_or_none()
+            if loser:
+                loser.losses += 1
+        await db.commit()
+    else:
+        # NPC wins (or draw). In PvE, player1 is defeated by NPC.
+        if p2_id is None:
+            l_res = await db.execute(select(Player).where(Player.id == p1_id))
+            loser = l_res.scalar_one_or_none()
+            if loser:
+                loser.losses += 1
+                await db.commit()
 
 
 async def _do_game_over(

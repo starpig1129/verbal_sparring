@@ -17,21 +17,25 @@ export default function Navbar({ username: _username, onLogout }: Props) {
 
   return (
     <nav className="bg-[#0f0e0b] border-b-2 border-bamboo flex justify-between items-center px-6 h-[60px] flex-shrink-0 z-30 relative shadow-lg">
-      <Link to="/" className="font-display text-xl md:text-2xl text-white tracking-[3px] hover:text-vermillion transition-colors duration-150 flex items-center gap-1.5">
-        唇槍<span className="text-vermillion">舌戰</span>
-      </Link>
-      
-      <div className="flex gap-6 md:gap-8 items-center">
-        <Link to="/leaderboard" className={linkClass('/leaderboard')}>
-          排行榜
-        </Link>
-        <Link to="/profile" className={linkClass('/profile')}>
-          我的戰績
-        </Link>
-        <Link to="/history" className={linkClass('/history')}>
-          對戰紀錄
+      <div className="flex items-center gap-8 md:gap-12">
+        <Link to="/" className="font-display text-xl md:text-2xl text-white tracking-[3px] hover:text-vermillion transition-colors duration-150 flex items-center gap-1.5 mr-4 md:mr-6">
+          唇槍<span className="text-vermillion">舌戰</span>
         </Link>
         
+        <div className="flex gap-6 md:gap-8 items-center">
+          <Link to="/leaderboard" className={linkClass('/leaderboard')}>
+            排行榜
+          </Link>
+          <Link to="/profile" className={linkClass('/profile')}>
+            我的戰績
+          </Link>
+          <Link to="/history" className={linkClass('/history')}>
+            對戰紀錄
+          </Link>
+        </div>
+      </div>
+      
+      <div className="flex items-center">
         <button
           onClick={onLogout}
           className="font-mono text-xs md:text-sm text-rose-400 border border-rose-950 hover:border-rose-500/70 bg-rose-950/20 px-4 py-1.5 rounded-lg tracking-[2px] transition-all duration-100 transform active:scale-95 hover:bg-rose-950/40 hover:text-rose-300"

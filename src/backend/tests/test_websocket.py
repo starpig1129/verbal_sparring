@@ -73,14 +73,24 @@ def test_websocket_connect_and_system_message():
     app.dependency_overrides[get_session] = _ws_test_session
 
     with patch(
-        "src.backend.services.referee.graph._call_ollama", new_callable=AsyncMock
-    ) as mock_ref, patch(
-        "src.backend.services.npc.agent._call_ollama", new_callable=AsyncMock
-    ) as mock_npc:
-        mock_ref.return_value = (
-            '{"damage": 15, "referee_comment": "不錯", "display_text": "你很差！"}'
-        )
-        mock_npc.return_value = "你的臉跟你的攻擊一樣難看"
+        "src.backend.services.referee.graph._llm", new_callable=AsyncMock
+    ) as mock_ref1, patch(
+        "src.backend.services.npc.agent._llm", new_callable=AsyncMock
+    ) as mock_npc1, patch(
+        "src.backend.services.game.battle_session._referee_llm", new_callable=AsyncMock
+    ) as mock_ref2, patch(
+        "src.backend.services.game.battle_session._npc_llm", new_callable=AsyncMock
+    ) as mock_npc2:
+        from unittest.mock import MagicMock
+        mock_ref_msg = MagicMock()
+        mock_ref_msg.content = '{"damage": 15, "referee_comment": "不錯", "display_text": "你很差！"}'
+        mock_ref1.ainvoke.return_value = mock_ref_msg
+        mock_ref2.ainvoke.return_value = mock_ref_msg
+
+        mock_npc_msg = MagicMock()
+        mock_npc_msg.content = "你的臉跟你的攻擊一樣難看"
+        mock_npc1.ainvoke.return_value = mock_npc_msg
+        mock_npc2.ainvoke.return_value = mock_npc_msg
 
         with TestClient(app) as client:
             token, match_id = _setup_player_and_match(client, "ws_tester")
@@ -97,14 +107,24 @@ def test_websocket_attack_reduces_hp():
     app.dependency_overrides[get_session] = _ws_test_session
 
     with patch(
-        "src.backend.services.referee.graph._call_ollama", new_callable=AsyncMock
-    ) as mock_ref, patch(
-        "src.backend.services.npc.agent._call_ollama", new_callable=AsyncMock
-    ) as mock_npc:
-        mock_ref.return_value = (
-            '{"damage": 20, "referee_comment": "猛", "display_text": "超猛攻擊！"}'
-        )
-        mock_npc.return_value = "廢物"
+        "src.backend.services.referee.graph._llm", new_callable=AsyncMock
+    ) as mock_ref1, patch(
+        "src.backend.services.npc.agent._llm", new_callable=AsyncMock
+    ) as mock_npc1, patch(
+        "src.backend.services.game.battle_session._referee_llm", new_callable=AsyncMock
+    ) as mock_ref2, patch(
+        "src.backend.services.game.battle_session._npc_llm", new_callable=AsyncMock
+    ) as mock_npc2:
+        from unittest.mock import MagicMock
+        mock_ref_msg = MagicMock()
+        mock_ref_msg.content = '{"damage": 20, "referee_comment": "猛", "display_text": "超猛攻擊！"}'
+        mock_ref1.ainvoke.return_value = mock_ref_msg
+        mock_ref2.ainvoke.return_value = mock_ref_msg
+
+        mock_npc_msg = MagicMock()
+        mock_npc_msg.content = "廢物"
+        mock_npc1.ainvoke.return_value = mock_npc_msg
+        mock_npc2.ainvoke.return_value = mock_npc_msg
 
         with TestClient(app) as client:
             token, match_id = _setup_player_and_match(client, "ws_attacker")

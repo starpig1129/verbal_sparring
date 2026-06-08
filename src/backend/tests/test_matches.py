@@ -115,3 +115,15 @@ async def test_list_other_players(client: AsyncClient) -> None:
     assert "list_user2" in usernames
     assert "list_user1" not in usernames
 
+
+async def test_list_match_history(client: AsyncClient) -> None:
+    """Listing match history returns 200 with list of finished matches."""
+    token = await _register_and_token(client, "history_user")
+    resp = await client.get(
+        "/api/matches/history",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+

@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.backend.core.database import get_session
-from src.backend.models import Match, MatchStatus, Player
-from src.backend.schemas.match import CreateMatchRequest, MatchResponse, PlayerMatchmakingResponse
+from src.backend.models import Match, MatchStatus, Player, GameRound
+from src.backend.schemas.match import CreateMatchRequest, MatchResponse, PlayerMatchmakingResponse, MatchHistoryEntry
 from src.backend.services.auth import get_current_player
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
@@ -94,4 +94,62 @@ async def list_other_players(
         )
         for p in players
     ]
+
+
+@router.get("/history", response_model=list[MatchHistoryEntry])
+async def list_match_history(
+    db: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_player),
+) -> list[MatchHistoryEntry]:
+    """Get a list of all finished matches in the system for public history."""
+    result = await db.execute(
+        select(Match)
+        .where(Match.status == MatchStatus.finished)
+        .order_by(Match.ended_at.desc())
+    )
+    matches = result.scalars().all()
+
+    history = []
+    for m in matches:
+        # Get player1 username
+        p1_res = await db.execute(select(Player.username).where(Player.id == m.player1_id))
+        p1_name = p1_res.scalar_one_or_none() or "Unknown"
+
+        # Get player2 username
+        p2_name = "NPC"
+        if m.player2_id:
+            p2_res = await db.execute(select(Player.username).where(Player.id == m.player2_id))
+            p2_name = p2_res.scalar_one_or_none() or "Unknown"
+
+        # Get winner username
+        winner_name = None
+        if m.winner_id:
+            w_res = await db.execute(select(Player.username).where(Player.id == m.winner_id))
+            winner_name = w_res.scalar_one_or_none()
+
+        # Get rounds statistics
+        r_count_res = await db.execute(
+            select(GameRound).where(GameRound.match_id == m.id)
+        )
+        rounds = r_count_res.scalars().all()
+        r_count = len(rounds)
+        total_dmg = sum(r.damage for r in rounds)
+
+        # Timestamp
+        ts = m.ended_at.timestamp() if m.ended_at else 0.0
+
+        history.append(
+            MatchHistoryEntry(
+                match_id=str(m.id),
+                player1_username=p1_name,
+                player2_username=p2_name,
+                winner_username=winner_name,
+                round_count=r_count,
+                total_damage=total_dmg,
+                timestamp=ts,
+            )
+        )
+
+    return history
+
 

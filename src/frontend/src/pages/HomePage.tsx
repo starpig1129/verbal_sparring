@@ -77,12 +77,12 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated && opponentTab === 'human') {
+    if (isAuthenticated) {
       fetchPlayers()
       const interval = setInterval(fetchPlayers, 10000)
       return () => clearInterval(interval)
     }
-  }, [isAuthenticated, opponentTab])
+  }, [isAuthenticated])
 
   useEffect(() => {
     let timer: any
@@ -205,117 +205,133 @@ export default function HomePage() {
         </div>
       </div>
       {/* Match card */}
-      <div className="w-full max-w-md bg-[#0f0e0a]/90 border border-[#4a3f28] shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl p-6 backdrop-blur-md">
+      {/* Match card */}
+      <div className="w-full max-w-3xl bg-[#0f0e0a]/90 border border-[#4a3f28] shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl p-6 backdrop-blur-md">
         <div className="font-mono text-[#e2d6be] text-xs tracking-[3px] mb-4 font-semibold border-b border-[#3a3020] pb-2">選擇對手</div>
-        <div className="flex border border-[#4a3f28] mb-4 rounded overflow-hidden">
-          <button onClick={() => { setOpponentTab('npc'); setOpponent('npc') }}
-            className={`flex-1 py-2.5 font-display text-xs md:text-sm tracking-[2px] font-bold transition-all ${opponentTab === 'npc' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>
-            AI NPC
-          </button>
-          <button onClick={() => setOpponentTab('human')}
-            className={`flex-1 py-2.5 font-mono text-xs md:text-sm tracking-[2px] font-bold transition-all ${opponentTab === 'human' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>
-            人類對手
-          </button>
-        </div>
-
-        {opponentTab === 'npc' ? (
-          <>
-            <div className="text-sm text-[#a88a6d] mb-4 font-body leading-relaxed text-center">
-              挑戰強大的毒舌 AI，磨練你的嗆聲技巧。AI 將會即時回嗆並由裁判做出判定。
-            </div>
-            <Button variant="primary-solid" onClick={() => handleStartMatch('npc')} className="w-full py-3 rounded-xl text-xs md:text-sm">對戰 AI NPC</Button>
-          </>
-        ) : (
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          {/* Left Column: Opponent Type / Switch & Options */}
           <div className="flex flex-col gap-4">
-            {/* Quick Match Section */}
-            <div className="border border-[#4a3f28]/60 bg-[#120f0a]/40 p-4 rounded-xl text-center">
-              <div className="text-xs text-[#a88a6d] tracking-wider mb-2 font-semibold">尋找任何在線對手</div>
-              <Button
-                variant="primary-solid"
-                onClick={startMatchmaking}
-                className="w-full py-3 rounded-xl text-xs md:text-sm font-bold bg-gradient-to-r from-vermillion to-orange-600 shadow-[0_0_15px_rgba(204,51,0,0.4)] hover:shadow-[0_0_25px_rgba(204,51,0,0.6)]"
-              >
-                ⚡ 快速配對對決
-              </Button>
+            <div className="flex border border-[#4a3f28] rounded overflow-hidden">
+              <button onClick={() => { setOpponentTab('npc'); setOpponent('npc') }}
+                className={`flex-1 py-2.5 font-display text-xs md:text-sm tracking-[2px] font-bold transition-all ${opponentTab === 'npc' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>
+                AI NPC
+              </button>
+              <button onClick={() => setOpponentTab('human')}
+                className={`flex-1 py-2.5 font-mono text-xs md:text-sm tracking-[2px] font-bold transition-all ${opponentTab === 'human' ? 'bg-vermillion text-white' : 'text-[#a88a6d] hover:text-white bg-[#120f0a]/50'}`}>
+                人類對手
+              </button>
             </div>
 
-            {/* List Selection Section */}
-            <div className="flex flex-col gap-2 mt-2">
-              <div className="text-xs text-[#e2d6be] tracking-wider font-semibold border-b border-[#3a3020] pb-1 flex justify-between items-center">
-                <span>選擇線上玩家挑戰</span>
-                <span className="text-[10px] text-[#a88a6d] font-normal">每 10 秒自動重新整理</span>
+            {opponentTab === 'npc' ? (
+              <div className="flex flex-col gap-4 flex-1 justify-center">
+                <div className="text-sm text-[#a88a6d] mb-4 font-body leading-relaxed text-center">
+                  挑戰強大的毒舌 AI，磨練你的嗆聲技巧。AI 將會即時回嗆並由裁判做出判定。
+                </div>
+                <Button variant="primary-solid" onClick={() => handleStartMatch('npc')} className="w-full py-3 rounded-xl text-xs md:text-sm">對戰 AI NPC</Button>
               </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {/* Quick Match Section */}
+                <div className="border border-[#4a3f28]/60 bg-[#120f0a]/40 p-4 rounded-xl text-center flex-1 flex flex-col justify-center">
+                  <div className="text-xs text-[#a88a6d] tracking-wider mb-2 font-semibold">尋找任何在線對手</div>
+                  <div className="text-sm text-[#e2d6be] mb-4 font-body leading-normal">
+                    與大廳中其他排隊玩家進行隨機快速匹配，一鍵對抗！
+                  </div>
+                  <Button
+                    variant="primary-solid"
+                    onClick={startMatchmaking}
+                    className="w-full py-3 rounded-xl text-xs md:text-sm font-bold bg-gradient-to-r from-vermillion to-orange-600 shadow-[0_0_15px_rgba(204,51,0,0.4)] hover:shadow-[0_0_25px_rgba(204,51,0,0.6)]"
+                  >
+                    ⚡ 快速配對對決
+                  </Button>
+                </div>
 
-              {/* Search */}
-              <input
-                type="text"
-                placeholder="搜尋玩家名稱..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-[#080805] border border-[#4a3f28] px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-vermillion rounded"
-              />
+                {/* Manual Invite */}
+                <div className="border border-[#4a3f28]/60 bg-[#120f0a]/40 p-4 rounded-xl">
+                  <div className="text-center">
+                    <button
+                      onClick={() => setShowManualInput(!showManualInput)}
+                      className="text-xs text-[#a88a6d] hover:text-white underline tracking-wide font-semibold"
+                    >
+                      {showManualInput ? '隱藏手動輸入' : '使用用戶名手動建立對局'}
+                    </button>
+                  </div>
+                  {showManualInput && (
+                    <div className="flex gap-2 mt-3">
+                      <input
+                        placeholder="輸入對手用戶名"
+                        value={opponent === 'npc' ? '' : opponent}
+                        onChange={e => setOpponent(e.target.value || 'npc')}
+                        className="flex-1 bg-[#080805] border border-[#4a3f28] px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-vermillion rounded"
+                      />
+                      <button
+                        onClick={() => handleStartMatch()}
+                        className="px-4 py-1.5 bg-vermillion text-white text-xs rounded hover:bg-red-600 transition-all font-bold"
+                      >
+                        開戰
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
-              {/* Player list scrollable */}
-              <div className="max-h-[160px] overflow-y-auto flex flex-col gap-2 pr-1 custom-scrollbar">
-                {filteredPlayers.length === 0 ? (
-                  <div className="text-xs text-[#a88a6d] italic text-center py-4">無其他註冊玩家</div>
-                ) : (
-                  filteredPlayers.map(p => (
-                    <div key={p.id} className="flex justify-between items-center p-2 rounded bg-[#16140f]/60 border border-[#3e3420]/50 hover:border-[#4a3f28] transition-all">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${p.is_online ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
-                          <span className="font-mono text-xs text-white font-bold">{p.username}</span>
-                          <span className="text-[10px] text-[#a88a6d]">({p.is_online ? '在線' : '離線'})</span>
-                        </div>
-                        <div className="text-[10px] text-[#a88a6d] font-mono">
-                          勝 {p.wins} | 敗 {p.losses} | 傷害 {p.total_damage}
-                        </div>
+          {/* Right Column: Player selection list */}
+          <div className="flex flex-col gap-2 border-t md:border-t-0 md:border-l border-[#3a3020] pt-4 md:pt-0 md:pl-6">
+            <div className="text-xs text-[#e2d6be] tracking-wider font-semibold border-b border-[#3a3020] pb-1 flex justify-between items-center">
+              <span>在線玩家列表</span>
+              <span className="text-[10px] text-[#a88a6d] font-normal">每 10 秒自動重新整理</span>
+            </div>
+
+            {/* Search */}
+            <input
+              type="text"
+              placeholder="搜尋玩家名稱..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-[#080805] border border-[#4a3f28] px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-vermillion rounded"
+            />
+
+            {/* Player list scrollable */}
+            <div className="max-h-[220px] overflow-y-auto flex flex-col gap-2 pr-1 custom-scrollbar">
+              {filteredPlayers.length === 0 ? (
+                <div className="text-xs text-[#a88a6d] italic text-center py-4">無其他註冊玩家</div>
+              ) : (
+                filteredPlayers.map(p => (
+                  <div key={p.id} className="flex justify-between items-center p-2 rounded bg-[#16140f]/60 border border-[#3e3420]/50 hover:border-[#4a3f28] transition-all">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="font-mono text-xs text-white font-bold">{p.username}</div>
+                      <div className="text-[10px] text-[#a88a6d] font-mono">
+                        勝 {p.wins} | 敗 {p.losses} | 傷害 {p.total_damage}
+                      </div>
+                    </div>
+                    
+                    {/* Online indicator & challenge button moved to the right */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end">
+                        <span className={`w-2 h-2 rounded-full ${p.is_online ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
+                        <span className="text-[9px] text-[#a88a6d] mt-0.5">{p.is_online ? '在線' : '離線'}</span>
                       </div>
                       <button
                         onClick={() => handleStartMatch(p.username)}
-                        className={`text-[10px] tracking-wider px-2.5 py-1 rounded font-bold transition-all ${
+                        disabled={!p.is_online}
+                        className={`text-[10px] tracking-wider px-2.5 py-1.5 rounded font-bold transition-all ${
                           p.is_online
-                            ? 'bg-vermillion hover:bg-red-600 text-white shadow-[0_0_8px_rgba(204,51,0,0.3)]'
-                            : 'bg-[#2a2215] hover:bg-[#3d311d] text-[#a88a6d] border border-[#4a3f28]'
+                            ? 'bg-vermillion hover:bg-red-600 text-white shadow-[0_0_8px_rgba(204,51,0,0.3)] cursor-pointer'
+                            : 'bg-zinc-800 text-zinc-500 border border-zinc-700 opacity-40 cursor-not-allowed'
                         }`}
                       >
                         挑戰
                       </button>
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+                ))
+              )}
             </div>
-
-            {/* Manual Toggle */}
-            <div className="text-center mt-1">
-              <button
-                onClick={() => setShowManualInput(!showManualInput)}
-                className="text-[10px] text-[#a88a6d] hover:text-white underline tracking-wide"
-              >
-                {showManualInput ? '隱藏手動輸入' : '使用用戶名手動建立對局'}
-              </button>
-            </div>
-
-            {showManualInput && (
-              <div className="flex gap-2">
-                <input
-                  placeholder="輸入對手用戶名"
-                  value={opponent === 'npc' ? '' : opponent}
-                  onChange={e => setOpponent(e.target.value || 'npc')}
-                  className="flex-1 bg-[#080805] border border-[#4a3f28] px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-vermillion rounded"
-                />
-                <button
-                  onClick={() => handleStartMatch()}
-                  className="px-4 py-1.5 bg-vermillion text-white text-xs rounded hover:bg-red-600 transition-all font-bold"
-                >
-                  開戰
-                </button>
-              </div>
-            )}
           </div>
-        )}
+        </div>
 
         {matchError && (
           <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2.5 text-[#ff6644] font-mono text-xs mt-4 rounded">{matchError}</div>

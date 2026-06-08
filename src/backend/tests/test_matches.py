@@ -47,6 +47,9 @@ async def test_create_match_opponent_not_found(client: AsyncClient) -> None:
 
 async def test_create_match_vs_human(client: AsyncClient) -> None:
     """Creating a match against a registered opponent returns 201 with is_npc=False."""
+    from src.backend.api.ws.battle_ws import active_connections_count
+    active_connections_count["player_b"] = 1
+
     t1 = await _register_and_token(client, "player_a")
     await client.post("/api/auth/register", json={"username": "player_b", "password": "pw"})
     resp = await client.post(
@@ -56,6 +59,22 @@ async def test_create_match_vs_human(client: AsyncClient) -> None:
     )
     assert resp.status_code == 201
     assert resp.json()["is_npc"] is False
+
+
+async def test_create_match_offline_opponent(client: AsyncClient) -> None:
+    """Creating a match against an offline player returns 400."""
+    t1 = await _register_and_token(client, "player_c")
+    await client.post("/api/auth/register", json={"username": "player_d", "password": "pw"})
+    from src.backend.api.ws.battle_ws import active_connections_count
+    active_connections_count.pop("player_d", None)
+
+    resp = await client.post(
+        "/api/matches",
+        json={"opponent": "player_d"},
+        headers={"Authorization": f"Bearer {t1}"},
+    )
+    assert resp.status_code == 400
+    assert "不在線" in resp.json()["detail"]
 
 
 async def test_create_match_unauthorized(client: AsyncClient) -> None:

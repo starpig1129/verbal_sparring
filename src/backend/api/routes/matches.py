@@ -46,6 +46,12 @@ async def create_match(
             raise HTTPException(status_code=404, detail="Opponent not found")
         if str(opponent.id) == current["sub"]:
             raise HTTPException(status_code=400, detail="Cannot create a match against yourself")
+
+        # Reject if the opponent is offline
+        from src.backend.api.ws.battle_ws import active_connections_count
+        if req.opponent not in active_connections_count or active_connections_count[req.opponent] <= 0:
+            raise HTTPException(status_code=400, detail="對手目前不在線，無法發起挑戰")
+
         player2_id = opponent.id
 
     match = Match(

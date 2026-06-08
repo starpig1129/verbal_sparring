@@ -2,12 +2,14 @@ fastapi==0.115.5
 uvicorn[standard]==0.32.1
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
+psycopg2-binary>=2.9.9
 alembic==1.14.0
 langgraph==0.2.50
 langchain-ollama==0.2.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 pydantic-settings==2.6.1
+PyYAML>=6.0.1
 
 # dev / test
 pytest==8.3.4

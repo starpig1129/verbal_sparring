@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: verbal_sparring
+      POSTGRES_USER: vsuser
+      POSTGRES_PASSWORD: vspass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vsuser -d verbal_sparring"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres_test:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: verbal_sparring_test
+      POSTGRES_USER: vsuser
+      POSTGRES_PASSWORD: vspass
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vsuser -d verbal_sparring_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - ${HOST_MODEL_DIR:-/media/dalin/data/models}:/models
+      - ./referee_lora_output/referee_agent/referee_agent:/lora/referee_agent
+      - ./player_lora_output/player_agent/player_agent:/lora/player_agent
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # In case CUDA driver mapping is needed:
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    command: >
+      --model ${VLLM_MODEL_NAME:-google/gemma-4-E4B-it}
+      --served-model-name gemma-base
+      --enable-lora
+      --lora-modules referee-agent=/lora/referee_agent player-agent=/lora/player_agent
+      --gpu-memory-utilization 0.90
+      --max-model-len 4096
+      --enforce-eager
+
+  backend:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vsuser:vspass@postgres:5432/verbal_sparring
+      - TEST_DATABASE_URL=postgresql+asyncpg://vsuser:vspass@postgres_test:5432/verbal_sparring_test
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-vllm}
+      - VLLM_URL=http://vllm:8000
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-a-random-32-char-string}
+    command: >
+      bash -c "cd src/backend && alembic upgrade head && cd /app && uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8000}
+    depends_on:
+      - backend
+
+volumes:
+  pg_data_dev:
+  hf_cache:

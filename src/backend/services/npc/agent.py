@@ -14,7 +14,7 @@ from langgraph.graph import END, StateGraph
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.backend.core.config import settings
+from src.backend.core.config import settings, NPC_SYSTEM_PROMPT
 from src.backend.models import NpcMemory
 
 
@@ -43,7 +43,9 @@ class NPCState(TypedDict):
 
 
 async def _call_ollama(messages: list[dict]) -> str:
-    """Send a chat request to Ollama and return the assistant message content.
+    """Send a chat request to the configured LLM provider and return the assistant content.
+
+    Supports both Ollama and OpenAI-compatible vLLM endpoints based on settings.model_provider.
 
     Args:
         messages: List of chat message dicts with "role" and "content" keys.
@@ -52,24 +54,30 @@ async def _call_ollama(messages: list[dict]) -> str:
         Stripped string content of the assistant's reply.
 
     Raises:
-        httpx.HTTPStatusError: If the Ollama API returns a non-2xx response.
+        httpx.HTTPStatusError: If the API returns a non-2xx response.
     """
-    payload = {
-        "model": settings.ollama_model,
-        "messages": messages,
-        "stream": False,
-        "options": {"temperature": 0.9},
-    }
-    async with httpx.AsyncClient(timeout=60) as c:
-        resp = await c.post(f"{settings.ollama_url}/api/chat", json=payload)
-        resp.raise_for_status()
-        return resp.json()["message"]["content"].strip()
-
-
-_NPC_SYSTEM = (
-    "你是一個毒舌 AI 格鬥選手。根據戰況與對手記憶，生成一句 20 字內的嗆聲攻擊（繁體中文）。"
-    "直接輸出攻擊文字，不加任何說明。"
-)
+    if settings.model_provider == "vllm":
+        payload = {
+            "model": settings.vllm_player_model,
+            "messages": messages,
+            "stream": False,
+            "temperature": settings.player_temperature,
+        }
+        async with httpx.AsyncClient(timeout=60) as c:
+            resp = await c.post(f"{settings.vllm_url}/v1/chat/completions", json=payload)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"].strip()
+    else:
+        payload = {
+            "model": settings.ollama_player_model,
+            "messages": messages,
+            "stream": False,
+            "options": {"temperature": settings.player_temperature},
+        }
+        async with httpx.AsyncClient(timeout=60) as c:
+            resp = await c.post(f"{settings.ollama_url}/api/chat", json=payload)
+            resp.raise_for_status()
+            return resp.json()["message"]["content"].strip()
 
 
 def _build_npc_messages(state: NPCState) -> list[dict]:
@@ -101,7 +109,7 @@ def _build_npc_messages(state: NPCState) -> list[dict]:
         f"{memory_summary}"
     )
     return [
-        {"role": "user", "content": f"{_NPC_SYSTEM}\n\n{situation}\n\n生成你這回合的攻擊："},
+        {"role": "user", "content": f"{NPC_SYSTEM_PROMPT}\n\n{situation}\n\n生成你這回合的攻擊："},
     ]
 
 

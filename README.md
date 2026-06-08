@@ -87,14 +87,62 @@ WebSocket 協定：
   - `game_over`：某方 HP 歸零
   - 前三種都帶 `hp_status` 與 `current_turn`，前端據此更新血條與「輪到誰」的輸入鎖定。
 
-## 執行方式
+# === 新版前後端分離架構與一鍵容器化啟動 (Modern Stack) ===
 
-**0. 取得專案 + 安裝依賴**
+新版架構將前端與後端分離，前端使用 Vite + React + TS，後端使用 FastAPI + PostgreSQL + LangGraph + Ollama/vLLM，並完全容器化以簡化本地開發設定。
+
+## 本地開發一鍵啟動 (Docker Compose)
+
+### 1. 設定環境變數
+將根目錄的 `.env.example` 複製為 `src/backend/.env`：
+```bash
+cp .env.example src/backend/.env
+```
+並根據您的需求編輯該設定檔。
+
+### 2. 自訂模型與 vLLM 高效能推論（選填）
+若您希望利用 vLLM 獲得極佳的推論速度並掛載自己下載的模型，請編輯 `src/backend/.env` 中的以下欄位：
+```env
+MODEL_PROVIDER=vllm
+VLLM_URL=http://vllm:8000
+VLLM_REFEREE_MODEL=referee-agent
+VLLM_PLAYER_MODEL=player-agent
+
+# 宿主機模型路徑與模型資料夾名稱
+HOST_MODEL_DIR=/media/dalin/data/models
+VLLM_MODEL_NAME=gemma-4-E4B-it-AWQ-INT8
+```
+
+### 3. 一鍵啟動
+在專案根目錄下，執行以下指令啟動所有服務：
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+此指令會自動：
+- 啟動 PostgreSQL 並執行資料庫遷移 (`alembic upgrade head`)。
+- 啟動後端 FastAPI 開服於 Port `8000`。
+- 啟動前端 Vite 開發伺服器於 Port `5173`。
+- （可選）在後台拉起 vLLM 或 Ollama 服務。
+
+啟動後即可透過瀏覽器瀏覽：`http://localhost:5173`
+
+### 排除 Docker GPU 資源預約錯誤
+若您執行啟動命令時遇到以下錯誤：
+`Error response from daemon: could not select device driver "nvidia" with capabilities: [[gpu]]`
+這代表您宿主機的 Docker 未配置好 `NVIDIA Container Toolkit`。若欲改用 CPU 運行，請編輯 `docker-compose.dev.yml`，並將 `ollama` 與 `vllm` 服務底下的 `deploy` GPU 資源限制宣告區塊移除即可。
+
+---
+
+# === 舊版單頁面架構與執行方式 (Legacy) ===
+
+這裡保留舊版單頁面 `battle.html` + `app.py` (Cython) 的啟動方式。
+
+## 舊版執行方式
 
 ```bash
 git clone git@github.com:JuhanWu/verbal_sparring.git
 cd verbal_sparring
-pip install -r requirements.txt   # torch/transformers 等視覺探針依賴可選，見下方「依賴」
+pip install -r requirements.txt   # torch/transformers 等視覺探針依賴可選
 ```
 
 **1. 啟動 vLLM 模型服務（port 8001）**

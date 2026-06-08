@@ -9,9 +9,10 @@
    - Build command: `npm run build`
    - Build output directory: `dist`
    - Root directory: `src/frontend`
-4. 在 Cloudflare Pages 的 Settings > Environment variables 加入：
+4. 在 Cloudflare Pages 的 Settings > Environment variables 加入（請依據您的後端網址設定，必須為 HTTPS/WSS，以符合瀏覽器安全性要求）：
    - `VITE_API_URL` = `https://api.yourdomain.com`
    - `VITE_WS_URL` = `wss://api.yourdomain.com`
+   *(備註：後端已在 `src/backend/main.py` 中啟用 `CORSMiddleware` (Allow Origins: `*`)，可完美支援來自任何 Cloudflare Pages 部署網域的跨網域 API 與 WebSocket 連線。)*
 5. 每次 push 到 main branch 自動觸發部署
 
 ## 後端 — Cloudflare DNS proxy

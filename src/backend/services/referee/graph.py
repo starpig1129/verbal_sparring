@@ -12,7 +12,11 @@ from typing import TypedDict
 import httpx
 from langgraph.graph import END, StateGraph
 
-from src.backend.core.config import settings
+from src.backend.core.config import (
+    settings,
+    REFEREE_SYSTEM_PROMPT,
+    REFEREE_FEW_SHOTS,
+)
 
 
 class RefereeState(TypedDict):
@@ -35,25 +39,10 @@ class RefereeState(TypedDict):
     display_text: str
 
 
-_SYSTEM_PROMPT = (
-    "你是格鬥遊戲的毒舌裁判。根據玩家攻擊輸出一行 JSON，禁止任何說明或 markdown："
-    '{"damage": 10到30整數, "referee_comment": "20字內毒舌短評", "display_text": "改寫後的嘲諷版攻擊（保留主題）"}'
-)
-
-_FEW_SHOT = [
-    (
-        "我要把你打到媽都不認得",
-        '{"damage": 26, "referee_comment": "幼兒園嘴砲等級", "display_text": "你這廢物，連出生都是錯誤！"}',
-    ),
-    (
-        "早安，今天天氣真好",
-        '{"damage": 11, "referee_comment": "場子被你拖到零下了", "display_text": "你的存在本身就是在浪費空氣！"}',
-    ),
-]
-
-
 async def _call_ollama(messages: list[dict]) -> str:
-    """Send a chat request to Ollama and return the assistant message content.
+    """Send a chat request to the configured LLM provider and return the assistant content.
+
+    Supports both Ollama and OpenAI-compatible vLLM endpoints based on settings.model_provider.
 
     Args:
         messages: List of chat message dicts with "role" and "content" keys.
@@ -62,18 +51,30 @@ async def _call_ollama(messages: list[dict]) -> str:
         Stripped string content of the assistant's reply.
 
     Raises:
-        httpx.HTTPStatusError: If the Ollama API returns a non-2xx response.
+        httpx.HTTPStatusError: If the API returns a non-2xx response.
     """
-    payload = {
-        "model": settings.ollama_model,
-        "messages": messages,
-        "stream": False,
-        "options": {"temperature": 0.8},
-    }
-    async with httpx.AsyncClient(timeout=60) as c:
-        resp = await c.post(f"{settings.ollama_url}/api/chat", json=payload)
-        resp.raise_for_status()
-        return resp.json()["message"]["content"].strip()
+    if settings.model_provider == "vllm":
+        payload = {
+            "model": settings.vllm_referee_model,
+            "messages": messages,
+            "stream": False,
+            "temperature": settings.referee_temperature,
+        }
+        async with httpx.AsyncClient(timeout=60) as c:
+            resp = await c.post(f"{settings.vllm_url}/v1/chat/completions", json=payload)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"].strip()
+    else:
+        payload = {
+            "model": settings.ollama_referee_model,
+            "messages": messages,
+            "stream": False,
+            "options": {"temperature": settings.referee_temperature},
+        }
+        async with httpx.AsyncClient(timeout=60) as c:
+            resp = await c.post(f"{settings.ollama_url}/api/chat", json=payload)
+            resp.raise_for_status()
+            return resp.json()["message"]["content"].strip()
 
 
 def _build_messages(text: str, image_b64: str | None) -> list[dict]:
@@ -87,10 +88,10 @@ def _build_messages(text: str, image_b64: str | None) -> list[dict]:
         List of message dicts ready to send to the Ollama chat API.
     """
     msgs: list[dict] = [
-        {"role": "user", "content": f"{_SYSTEM_PROMPT}\n\n玩家發言：「{_FEW_SHOT[0][0]}」"}
+        {"role": "user", "content": f"{REFEREE_SYSTEM_PROMPT}\n\n玩家發言：「{REFEREE_FEW_SHOTS[0][0]}」"}
     ]
-    msgs.append({"role": "assistant", "content": _FEW_SHOT[0][1]})
-    for player_text, json_out in _FEW_SHOT[1:]:
+    msgs.append({"role": "assistant", "content": REFEREE_FEW_SHOTS[0][1]})
+    for player_text, json_out in REFEREE_FEW_SHOTS[1:]:
         msgs.append({"role": "user", "content": f"玩家發言：「{player_text}」"})
         msgs.append({"role": "assistant", "content": json_out})
 

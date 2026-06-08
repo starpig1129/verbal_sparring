@@ -91,8 +91,9 @@ def _build_referee_messages(
       HumanMessage         — battle context + recent dialogue + attack to score
     """
     msgs: list = [SystemMessage(content=REFEREE_SYSTEM_PROMPT)]
+    # Few-shots use same format as real attack messages — use directly
     for inp, out in REFEREE_FEW_SHOTS:
-        msgs.append(HumanMessage(content=f"玩家發言：「{inp}」"))
+        msgs.append(HumanMessage(content=inp))
         msgs.append(AIMessage(content=out))
 
     situation = (
@@ -405,6 +406,7 @@ class BattleSession:
         self._match_id = match_id
         self._thread_id = match_id
         self._initialized = False
+        self._last_messages: list[BaseMessage] = []
         self._initial_state: BattleState = {
             "messages": [],
             "hp": dict(initial_hp),
@@ -476,16 +478,13 @@ class BattleSession:
             turn_input = {**self._initial_state, **turn_input}
             self._initialized = True
 
-        return await self._graph.ainvoke(turn_input, config=config)
+        result = await self._graph.ainvoke(turn_input, config=config)
+        self._last_messages = list(result.get("messages", []))
+        return result
 
     def get_messages(self) -> list[BaseMessage]:
-        """Return the current accumulated message list from the checkpointer."""
-        snapshot = self._checkpointer.get(
-            {"configurable": {"thread_id": self._thread_id}}
-        )
-        if snapshot and snapshot.values:
-            return list(snapshot.values.get("messages", []))
-        return []
+        """Return accumulated battle messages from the last process_attack result."""
+        return list(self._last_messages)
 
     def destroy(self) -> None:
         """Release the checkpointer and compiled graph."""

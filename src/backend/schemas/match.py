@@ -47,3 +47,15 @@ class MatchResponse(BaseModel):
     match_id: str
     opponent: str
     is_npc: bool
+
+
+class PlayerMatchmakingResponse(BaseModel):
+    """Details of a registered player for matchmaking purposes."""
+
+    id: str
+    username: str
+    wins: int
+    losses: int
+    total_damage: int
+    is_online: bool
+

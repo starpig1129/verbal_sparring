@@ -22,6 +22,13 @@ from src.backend.services.game.room import GameRoom, rooms
 
 router = APIRouter()
 
+# Active connections per username to track online status
+active_connections_count: dict[str, int] = {}
+
+# Matchmaking queue for quick pairing
+# Each element: {"username": str, "player_id": str, "websocket": WebSocket}
+matchmaking_queue: list[dict] = []
+
 
 async def _persist_round(
     db: AsyncSession,
@@ -153,241 +160,349 @@ async def battle_ws(
         await websocket.close(code=4001)
         return
 
-    await websocket.accept()
-    print(f"[WS INFO] WebSocket accepted for player {player_id}", flush=True)
-
-    result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
-    match = result.scalar_one_or_none()
-    if not match:
-        print(f"[WS WARNING] Match {match_id} not found", flush=True)
-        await websocket.send_text(
-            json.dumps({"type": "error", "message": "Match not found"})
-        )
-        await websocket.close()
-        return
-
-    is_npc = match.player2_id is None
-    if match_id not in rooms:
-        rooms[match_id] = GameRoom(match_id=match_id, is_npc=is_npc)
-
-    room = rooms[match_id]
-    room.connect(player_id, websocket)
-
-    if is_npc and "NPC" not in room.hp:
-        room.hp["NPC"] = 100
-
-    if not room.current_turn:
-        room.current_turn = player_id
-
-    if match.status == MatchStatus.pending and (is_npc or room.is_full()):
-        match.status = MatchStatus.ongoing
-        match.started_at = datetime.now(timezone.utc)
-        await db.commit()
-
-    await room.broadcast(
-        {
-            "type": "system",
-            "message": f"【{player_id}】進入競技場！",
-            "hp_status": room.hp,
-            "current_turn": room.current_turn,
-        }
-    )
-
-    # JWT sub is the canonical UUID for DB operations
-    attacker_player_id = payload["sub"]
+    username = payload.get("username")
+    if username:
+        active_connections_count[username] = active_connections_count.get(username, 0) + 1
 
     try:
-        while True:
-            raw = await websocket.receive_text()
-            print(f"[WS RECEIVED] Message from {player_id}: {raw}", flush=True)
+        await websocket.accept()
+        print(f"[WS INFO] WebSocket accepted for player {player_id}", flush=True)
 
-            try:
-                payload_data = json.loads(raw)
-            except Exception as e:
-                print(f"[WS ERROR] Failed to parse JSON from {player_id}: {e}", flush=True)
-                await room.send_to(
-                    player_id,
-                    {"type": "error", "message": "無效的攻擊格式 (JSON 解析失敗)"},
-                )
-                continue
+        result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
+        match = result.scalar_one_or_none()
+        if not match:
+            print(f"[WS WARNING] Match {match_id} not found", flush=True)
+            await websocket.send_text(
+                json.dumps({"type": "error", "message": "Match not found"})
+            )
+            await websocket.close()
+            return
 
-            text = payload_data.get("text", "")
-            image_b64 = payload_data.get("image")
+        is_npc = match.player2_id is None
+        if match_id not in rooms:
+            rooms[match_id] = GameRoom(match_id=match_id, is_npc=is_npc)
 
-            if player_id != room.current_turn:
-                print(
-                    f"[WS WARNING] Player {player_id} tried to attack out of turn "
-                    f"(current: {room.current_turn})",
-                    flush=True,
-                )
-                await room.send_to(
-                    player_id,
-                    {
-                        "type": "turn_error",
-                        "message": "還沒輪到你！",
-                        "hp_status": room.hp,
-                        "current_turn": room.current_turn,
-                    },
-                )
-                continue
+        room = rooms[match_id]
+        room.connect(player_id, websocket)
 
-            if not text and not image_b64:
-                continue
+        if is_npc and "NPC" not in room.hp:
+            room.hp["NPC"] = 100
 
-            try:
-                print(
-                    f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...",
-                    flush=True,
-                )
+        if not room.current_turn:
+            room.current_turn = player_id
 
-                session = get_battle_session(match_id)
-                if not session:
-                    session = create_battle_session(
-                        match_id=match_id,
-                        player_id=player_id,
-                        player_uuid=attacker_player_id,
-                        is_npc=is_npc,
-                        initial_hp=dict(room.hp),
+        if match.status == MatchStatus.pending and (is_npc or room.is_full()):
+            match.status = MatchStatus.ongoing
+            match.started_at = datetime.now(timezone.utc)
+            await db.commit()
+
+        await room.broadcast(
+            {
+                "type": "system",
+                "message": f"【{player_id}】進入競技場！",
+                "hp_status": room.hp,
+                "current_turn": room.current_turn,
+            }
+        )
+
+        # JWT sub is the canonical UUID for DB operations
+        attacker_player_id = payload["sub"]
+
+        try:
+            while True:
+                raw = await websocket.receive_text()
+                print(f"[WS RECEIVED] Message from {player_id}: {raw}", flush=True)
+
+                try:
+                    payload_data = json.loads(raw)
+                except Exception as e:
+                    print(f"[WS ERROR] Failed to parse JSON from {player_id}: {e}", flush=True)
+                    await room.send_to(
+                        player_id,
+                        {"type": "error", "message": "無效的攻擊格式 (JSON 解析失敗)"},
+                    )
+                    continue
+
+                text = payload_data.get("text", "")
+                image_b64 = payload_data.get("image")
+
+                if player_id != room.current_turn:
+                    print(
+                        f"[WS WARNING] Player {player_id} tried to attack out of turn "
+                        f"(current: {room.current_turn})",
+                        flush=True,
+                    )
+                    await room.send_to(
+                        player_id,
+                        {
+                            "type": "turn_error",
+                            "message": "還沒輪到你！",
+                            "hp_status": room.hp,
+                            "current_turn": room.current_turn,
+                        },
+                    )
+                    continue
+
+                if not text and not image_b64:
+                    continue
+
+                try:
+                    print(
+                        f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...",
+                        flush=True,
                     )
 
-                # Stream results node-by-node so we can broadcast each step immediately.
-                # _npc_pending_text carries the NPC's words from npc_generate to npc_score.
-                _npc_pending_text: str = ""
-                async for node_name, out in session.process_attack_streaming(
-                    attack_text=text,
-                    attacker_id=player_id,
-                    db=db,
-                    image_b64=image_b64,
-                    sender_display=player_id,
-                ):
-                    if node_name == "score_player_attack":
-                        # ── Player attack result available ────────────────────
-                        room.hp = dict(out["hp"])
-                        room.round_number = out["round_number"]
-                        if not out.get("game_over"):
-                            room.current_turn = out["current_turn"]
-
-                        print(
-                            f"[WS PROCESS] Referee: damage={out['damage']}, "
-                            f"comment={out['ref_comment']}", flush=True,
+                    session = get_battle_session(match_id)
+                    if not session:
+                        session = create_battle_session(
+                            match_id=match_id,
+                            player_id=player_id,
+                            player_uuid=attacker_player_id,
+                            is_npc=is_npc,
+                            initial_hp=dict(room.hp),
                         )
 
-                        await _persist_round(
-                            db, match_id, out["round_number"],
-                            attacker_player_id, text, image_b64,
-                            out["ref_display_text"], out["damage"],
-                            out["ref_comment"], dict(room.hp),
-                        )
-                        attacker_row = await db.execute(
-                            select(Player).where(Player.id == uuid.UUID(attacker_player_id))
-                        )
-                        attacker = attacker_row.scalar_one_or_none()
-                        if attacker:
-                            attacker.total_damage += out["damage"]
-                            await db.commit()
+                    # Stream results node-by-node so we can broadcast each step immediately.
+                    # _npc_pending_text carries the NPC's words from npc_generate to npc_score.
+                    _npc_pending_text: str = ""
+                    async for node_name, out in session.process_attack_streaming(
+                        attack_text=text,
+                        attacker_id=player_id,
+                        db=db,
+                        image_b64=image_b64,
+                        sender_display=player_id,
+                    ):
+                        if node_name == "score_player_attack":
+                            # ── Player attack result available ────────────────────
+                            room.hp = dict(out["hp"])
+                            room.round_number = out["round_number"]
+                            if not out.get("game_over"):
+                                room.current_turn = out["current_turn"]
 
-                        # Broadcast immediately — client sees result before NPC thinks
-                        await room.broadcast({
-                            "type": "attack",
-                            "sender": player_id,
-                            "original_text": text,
-                            "display_text": out["ref_display_text"],
-                            "damage": out["damage"],
-                            "referee_comment": out["ref_comment"],
-                            "hp_status": dict(room.hp),
-                            "current_turn": room.current_turn,
-                        })
-
-                        if out.get("game_over"):
-                            await _do_game_over(
-                                session, db, room, match_id, is_npc,
-                                out, player_id, attacker_player_id,
+                            print(
+                                f"[WS PROCESS] Referee: damage={out['damage']}, "
+                                f"comment={out['ref_comment']}", flush=True,
                             )
 
-                    elif node_name == "npc_generate":
-                        # ── NPC words ready, referee still scoring ────────────
-                        _npc_pending_text = out["npc_text"]
-                        print(
-                            f"[WS PROCESS] NPC typing: {_npc_pending_text[:30]}...",
-                            flush=True,
-                        )
-                        # Show NPC text immediately as a pending bubble;
-                        # npc_score will follow shortly with damage + HP update.
-                        await room.broadcast({
-                            "type": "npc_typing",
-                            "npc_text": _npc_pending_text,
-                        })
+                            await _persist_round(
+                                db, match_id, out["round_number"],
+                                attacker_player_id, text, image_b64,
+                                out["ref_display_text"], out["damage"],
+                                out["ref_comment"], dict(room.hp),
+                            )
+                            attacker_row = await db.execute(
+                                select(Player).where(Player.id == uuid.UUID(attacker_player_id))
+                            )
+                            attacker = attacker_row.scalar_one_or_none()
+                            if attacker:
+                                attacker.total_damage += out["damage"]
+                                await db.commit()
 
-                    elif node_name == "npc_score":
-                        # ── NPC damage + referee comment ready ────────────────
-                        room.hp = dict(out["hp"])
-                        room.round_number = out["round_number"]
-                        room.current_turn = out.get("current_turn") or player_id
+                            # Broadcast immediately — client sees result before NPC thinks
+                            await room.broadcast({
+                                "type": "attack",
+                                "sender": player_id,
+                                "original_text": text,
+                                "display_text": out["ref_display_text"],
+                                "damage": out["damage"],
+                                "referee_comment": out["ref_comment"],
+                                "hp_status": dict(room.hp),
+                                "current_turn": room.current_turn,
+                            })
 
-                        # npc_text came from npc_generate (carried via _npc_pending_text)
-                        npc_text = _npc_pending_text
+                            if out.get("game_over"):
+                                await _do_game_over(
+                                    session, db, room, match_id, is_npc,
+                                    out, player_id, attacker_player_id,
+                                )
 
-                        print(
-                            f"[WS PROCESS] NPC scored: damage={out['npc_damage']}, "
-                            f"comment={out['npc_ref_comment']}", flush=True,
-                        )
+                        elif node_name == "npc_generate":
+                            # ── NPC words ready, referee still scoring ────────────
+                            _npc_pending_text = out["npc_text"]
+                            print(
+                                f"[WS PROCESS] NPC typing: {_npc_pending_text[:30]}...",
+                                flush=True,
+                            )
+                            # Show NPC text immediately as a pending bubble;
+                            # npc_score will follow shortly with damage + HP update.
+                            await room.broadcast({
+                                "type": "npc_typing",
+                                "npc_text": _npc_pending_text,
+                            })
 
-                        await _persist_round(
-                            db, match_id, out["round_number"],
-                            None, npc_text, None,
-                            out["npc_ref_display_text"], out["npc_damage"],
-                            out["npc_ref_comment"], dict(room.hp),
-                        )
+                        elif node_name == "npc_score":
+                            # ── NPC damage + referee comment ready ────────────────
+                            room.hp = dict(out["hp"])
+                            room.round_number = out["round_number"]
+                            room.current_turn = out.get("current_turn") or player_id
 
-                        # Replace pending NPC bubble with full result + referee banner
-                        await room.broadcast({
-                            "type": "npc_attack",
-                            "npc_text": npc_text,
-                            "display_text": out["npc_ref_display_text"],
-                            "damage": out["npc_damage"],
-                            "referee_comment": out["npc_ref_comment"],
-                            "hp_status": dict(room.hp),
-                            "current_turn": room.current_turn,
-                        })
+                            # npc_text came from npc_generate (carried via _npc_pending_text)
+                            npc_text = _npc_pending_text
 
-                        if out.get("game_over"):
-                            await _do_game_over(
-                                session, db, room, match_id, is_npc,
-                                out, player_id, attacker_player_id,
+                            print(
+                                f"[WS PROCESS] NPC scored: damage={out['npc_damage']}, "
+                                f"comment={out['npc_ref_comment']}", flush=True,
                             )
 
-            except Exception as round_err:
-                import traceback
+                            await _persist_round(
+                                db, match_id, out["round_number"],
+                                None, npc_text, None,
+                                out["npc_ref_display_text"], out["npc_damage"],
+                                out["npc_ref_comment"], dict(room.hp),
+                            )
 
-                print(
-                    f"[WS ROUND ERROR] Error processing attack round: {round_err}",
-                    flush=True,
-                )
-                traceback.print_exc()
-                await room.send_to(
-                    player_id,
+                            # Replace pending NPC bubble with full result + referee banner
+                            await room.broadcast({
+                                "type": "npc_attack",
+                                "npc_text": npc_text,
+                                "display_text": out["npc_ref_display_text"],
+                                "damage": out["npc_damage"],
+                                "referee_comment": out["npc_ref_comment"],
+                                "hp_status": dict(room.hp),
+                                "current_turn": room.current_turn,
+                            })
+
+                            if out.get("game_over"):
+                                await _do_game_over(
+                                    session, db, room, match_id, is_npc,
+                                    out, player_id, attacker_player_id,
+                                )
+
+                except Exception as round_err:
+                    import traceback
+
+                    print(
+                        f"[WS ROUND ERROR] Error processing attack round: {round_err}",
+                        flush=True,
+                    )
+                    traceback.print_exc()
+                    await room.send_to(
+                        player_id,
+                        {
+                            "type": "error",
+                            "message": f"處理回合時發生錯誤: {str(round_err)}",
+                        },
+                    )
+                    continue
+
+        except WebSocketDisconnect:
+            print(
+                f"[WS INFO] Player {player_id} disconnected from match {match_id}",
+                flush=True,
+            )
+            room.disconnect(player_id)
+            if not room.connections:
+                rooms.pop(match_id, None)
+                destroy_battle_session(match_id)
+            else:
+                await room.broadcast(
                     {
-                        "type": "error",
-                        "message": f"處理回合時發生錯誤: {str(round_err)}",
-                    },
+                        "type": "system",
+                        "message": f"【{player_id}】承受不住壓力逃跑了！",
+                        "hp_status": room.hp,
+                        "current_turn": room.current_turn,
+                    }
                 )
-                continue
+    finally:
+        if username and username in active_connections_count:
+            active_connections_count[username] -= 1
+            if active_connections_count[username] <= 0:
+                active_connections_count.pop(username, None)
+
+
+@router.websocket("/ws/queue")
+async def queue_ws(
+    websocket: WebSocket,
+    token: str = "",
+    db: AsyncSession = Depends(get_session),
+) -> None:
+    """WebSocket endpoint for matchmaking queue."""
+    payload = decode_token(token)
+    if payload.get("_error"):
+        await websocket.close(code=4001)
+        return
+
+    username = payload.get("username")
+    player_uuid = payload.get("sub")
+    if not username or not player_uuid:
+        await websocket.close(code=4002)
+        return
+
+    await websocket.accept()
+
+    # Update active connections count
+    active_connections_count[username] = active_connections_count.get(username, 0) + 1
+
+    player_item = {
+        "player_id": player_uuid,
+        "username": username,
+        "websocket": websocket
+    }
+
+    try:
+        # Check if there is an opponent in the queue who is NOT the current player
+        opponent = None
+        for p in matchmaking_queue:
+            if p["player_id"] != player_uuid:
+                opponent = p
+                break
+
+        if opponent:
+            matchmaking_queue.remove(opponent)
+            # Match found! Create a match in the database
+            match = Match(
+                player1_id=uuid.UUID(opponent["player_id"]),
+                player2_id=uuid.UUID(player_uuid),
+                status=MatchStatus.pending,
+            )
+            db.add(match)
+            await db.commit()
+
+            match_id = str(match.id)
+
+            # Notify opponent
+            try:
+                await opponent["websocket"].send_text(json.dumps({
+                    "type": "match_found",
+                    "match_id": match_id,
+                    "opponent": username
+                }, ensure_ascii=False))
+            except Exception:
+                pass
+
+            # Notify current player
+            await websocket.send_text(json.dumps({
+                "type": "match_found",
+                "match_id": match_id,
+                "opponent": opponent["username"]
+            }, ensure_ascii=False))
+
+        else:
+            # Add to matchmaking queue
+            matchmaking_queue.append(player_item)
+            await websocket.send_text(json.dumps({
+                "type": "queued",
+                "message": "已加入配對佇列，尋找對手中..."
+            }, ensure_ascii=False))
+
+            # Keep the connection alive
+            while True:
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_text("pong")
 
     except WebSocketDisconnect:
-        print(
-            f"[WS INFO] Player {player_id} disconnected from match {match_id}",
-            flush=True,
-        )
-        room.disconnect(player_id)
-        if not room.connections:
-            rooms.pop(match_id, None)
-            destroy_battle_session(match_id)
-        else:
-            await room.broadcast(
-                {
-                    "type": "system",
-                    "message": f"【{player_id}】承受不住壓力逃跑了！",
-                    "hp_status": room.hp,
-                    "current_turn": room.current_turn,
-                }
-            )
+        pass
+    except Exception as e:
+        print(f"[QUEUE ERROR] {e}", flush=True)
+    finally:
+        # Clean up queue
+        if player_item in matchmaking_queue:
+            matchmaking_queue.remove(player_item)
+
+        # Clean up active connections
+        if username in active_connections_count:
+            active_connections_count[username] -= 1
+            if active_connections_count[username] <= 0:
+                active_connections_count.pop(username, None)
+

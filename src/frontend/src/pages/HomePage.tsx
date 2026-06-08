@@ -1,5 +1,4 @@
-// src/frontend/src/pages/HomePage.tsx
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import Button from '../components/Button'
@@ -16,6 +15,24 @@ export default function HomePage() {
   const [matchError, setMatchError] = useState('')
   const navigate = useNavigate()
 
+  // New state variables for matchmaking
+  interface MatchmakingPlayer {
+    id: string
+    username: string
+    wins: number
+    losses: number
+    total_damage: number
+    is_online: boolean
+  }
+
+  const [players, setPlayers] = useState<MatchmakingPlayer[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showManualInput, setShowManualInput] = useState(false)
+  const [matchmakingStatus, setMatchmakingStatus] = useState<'idle' | 'queued' | 'matched'>('idle')
+  const [matchmakingTime, setMatchmakingTime] = useState(0)
+
+  const queueWsRef = useRef<WebSocket | null>(null)
+
   async function handleAuth() {
     clearError()
     const success = tab === 'login'
@@ -24,12 +41,13 @@ export default function HomePage() {
     if (success) { setInputUsername(''); setInputPassword('') }
   }
 
-  async function handleStartMatch() {
+  async function handleStartMatch(targetOpponent?: string) {
+    const opp = targetOpponent ?? opponent
     setMatchError('')
     const resp = await fetch(`${API}/api/matches`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ opponent }),
+      body: JSON.stringify({ opponent: opp }),
     })
     const data = await resp.json()
     if (resp.ok) {
@@ -38,6 +56,105 @@ export default function HomePage() {
       setMatchError(data.detail ?? '建立對局失敗')
     }
   }
+
+  async function fetchPlayers() {
+    try {
+      const resp = await fetch(`${API}/api/matches/players`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        const sorted = data.sort((a: MatchmakingPlayer, b: MatchmakingPlayer) => {
+          if (a.is_online && !b.is_online) return -1
+          if (!a.is_online && b.is_online) return 1
+          return b.total_damage - a.total_damage
+        })
+        setPlayers(sorted)
+      }
+    } catch (err) {
+      console.error('Failed to fetch players', err)
+    }
+  }
+
+  useEffect(() => {
+    if (isAuthenticated && opponentTab === 'human') {
+      fetchPlayers()
+      const interval = setInterval(fetchPlayers, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [isAuthenticated, opponentTab])
+
+  useEffect(() => {
+    let timer: any
+    if (matchmakingStatus === 'queued') {
+      timer = setInterval(() => {
+        setMatchmakingTime(prev => prev + 1)
+      }, 1000)
+    }
+    return () => clearInterval(timer)
+  }, [matchmakingStatus])
+
+  useEffect(() => {
+    return () => {
+      if (queueWsRef.current) {
+        queueWsRef.current.close()
+      }
+    }
+  }, [])
+
+  function startMatchmaking() {
+    if (queueWsRef.current) return
+    setMatchmakingStatus('queued')
+    setMatchmakingTime(0)
+    setMatchError('')
+
+    const WS_BASE = (import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000').replace(/^http/, 'ws')
+    const url = `${WS_BASE}/ws/queue?token=${token}`
+    const ws = new WebSocket(url)
+    queueWsRef.current = ws
+
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        if (data.type === 'match_found') {
+          setMatchmakingStatus('matched')
+          setTimeout(() => {
+            navigate(`/battle/${data.match_id}`, { state: { token, myUsername: username, userId } })
+          }, 1200)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    ws.onclose = () => {
+      queueWsRef.current = null
+      setMatchmakingStatus(prev => prev === 'matched' ? 'matched' : 'idle')
+    }
+
+    ws.onerror = () => {
+      setMatchError('配對發生錯誤，請稍後再試')
+      cancelMatchmaking()
+    }
+  }
+
+  function cancelMatchmaking() {
+    if (queueWsRef.current) {
+      queueWsRef.current.close()
+      queueWsRef.current = null
+    }
+    setMatchmakingStatus('idle')
+  }
+
+  function formatTime(seconds: number): string {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0')
+    const s = (seconds % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  const filteredPlayers = players.filter(p =>
+    p.username.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   if (!isAuthenticated) {
     return (
@@ -100,19 +217,161 @@ export default function HomePage() {
             人類對手
           </button>
         </div>
-        {opponentTab === 'human' && (
-          <input
-            placeholder="輸入對手用戶名"
-            value={opponent === 'npc' ? '' : opponent}
-            onChange={e => setOpponent(e.target.value || 'npc')}
-            className="w-full bg-[#080805] border border-[#4a3f28] px-4 py-2.5 text-white font-mono text-sm mb-4 focus:outline-none focus:border-vermillion rounded"
-          />
+
+        {opponentTab === 'npc' ? (
+          <>
+            <div className="text-sm text-[#a88a6d] mb-4 font-body leading-relaxed text-center">
+              挑戰強大的毒舌 AI，磨練你的嗆聲技巧。AI 將會即時回嗆並由裁判做出判定。
+            </div>
+            <Button variant="primary-solid" onClick={() => handleStartMatch('npc')} className="w-full py-3 rounded-xl text-xs md:text-sm">對戰 AI NPC</Button>
+          </>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {/* Quick Match Section */}
+            <div className="border border-[#4a3f28]/60 bg-[#120f0a]/40 p-4 rounded-xl text-center">
+              <div className="text-xs text-[#a88a6d] tracking-wider mb-2 font-semibold">尋找任何在線對手</div>
+              <Button
+                variant="primary-solid"
+                onClick={startMatchmaking}
+                className="w-full py-3 rounded-xl text-xs md:text-sm font-bold bg-gradient-to-r from-vermillion to-orange-600 shadow-[0_0_15px_rgba(204,51,0,0.4)] hover:shadow-[0_0_25px_rgba(204,51,0,0.6)]"
+              >
+                ⚡ 快速配對對決
+              </Button>
+            </div>
+
+            {/* List Selection Section */}
+            <div className="flex flex-col gap-2 mt-2">
+              <div className="text-xs text-[#e2d6be] tracking-wider font-semibold border-b border-[#3a3020] pb-1 flex justify-between items-center">
+                <span>選擇線上玩家挑戰</span>
+                <span className="text-[10px] text-[#a88a6d] font-normal">每 10 秒自動重新整理</span>
+              </div>
+
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="搜尋玩家名稱..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full bg-[#080805] border border-[#4a3f28] px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-vermillion rounded"
+              />
+
+              {/* Player list scrollable */}
+              <div className="max-h-[160px] overflow-y-auto flex flex-col gap-2 pr-1 custom-scrollbar">
+                {filteredPlayers.length === 0 ? (
+                  <div className="text-xs text-[#a88a6d] italic text-center py-4">無其他註冊玩家</div>
+                ) : (
+                  filteredPlayers.map(p => (
+                    <div key={p.id} className="flex justify-between items-center p-2 rounded bg-[#16140f]/60 border border-[#3e3420]/50 hover:border-[#4a3f28] transition-all">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${p.is_online ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
+                          <span className="font-mono text-xs text-white font-bold">{p.username}</span>
+                          <span className="text-[10px] text-[#a88a6d]">({p.is_online ? '在線' : '離線'})</span>
+                        </div>
+                        <div className="text-[10px] text-[#a88a6d] font-mono">
+                          勝 {p.wins} | 敗 {p.losses} | 傷害 {p.total_damage}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleStartMatch(p.username)}
+                        className={`text-[10px] tracking-wider px-2.5 py-1 rounded font-bold transition-all ${
+                          p.is_online
+                            ? 'bg-vermillion hover:bg-red-600 text-white shadow-[0_0_8px_rgba(204,51,0,0.3)]'
+                            : 'bg-[#2a2215] hover:bg-[#3d311d] text-[#a88a6d] border border-[#4a3f28]'
+                        }`}
+                      >
+                        挑戰
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Manual Toggle */}
+            <div className="text-center mt-1">
+              <button
+                onClick={() => setShowManualInput(!showManualInput)}
+                className="text-[10px] text-[#a88a6d] hover:text-white underline tracking-wide"
+              >
+                {showManualInput ? '隱藏手動輸入' : '使用用戶名手動建立對局'}
+              </button>
+            </div>
+
+            {showManualInput && (
+              <div className="flex gap-2">
+                <input
+                  placeholder="輸入對手用戶名"
+                  value={opponent === 'npc' ? '' : opponent}
+                  onChange={e => setOpponent(e.target.value || 'npc')}
+                  className="flex-1 bg-[#080805] border border-[#4a3f28] px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-vermillion rounded"
+                />
+                <button
+                  onClick={() => handleStartMatch()}
+                  className="px-4 py-1.5 bg-vermillion text-white text-xs rounded hover:bg-red-600 transition-all font-bold"
+                >
+                  開戰
+                </button>
+              </div>
+            )}
+          </div>
         )}
+
         {matchError && (
-          <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2.5 text-[#ff6644] font-mono text-xs mb-4 rounded">{matchError}</div>
+          <div className="border-l-[3px] border-vermillion bg-[#1a0005] px-3 py-2.5 text-[#ff6644] font-mono text-xs mt-4 rounded">{matchError}</div>
         )}
-        <Button variant="primary-solid" onClick={handleStartMatch} className="w-full py-3 rounded-xl text-xs md:text-sm">開戰！</Button>
       </div>
+
+      {/* Matchmaking Overlay Modal */}
+      {matchmakingStatus !== 'idle' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-all duration-300">
+          <div className="w-full max-w-sm p-8 bg-[#0f0e0a] border-2 border-[#4a3f28] shadow-[0_0_50px_rgba(204,51,0,0.5)] rounded-2xl text-center flex flex-col items-center gap-6">
+            {/* Spinning/pulsing animation */}
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-[#3a3020] opacity-40"></div>
+              {matchmakingStatus === 'queued' ? (
+                <>
+                  <div className="absolute inset-0 rounded-full border-4 border-t-vermillion border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                  <div className="absolute inset-2 rounded-full border-2 border-dashed border-[#a88a6d] animate-pulse"></div>
+                  <span className="text-vermillion text-2xl font-mono animate-bounce">⚔️</span>
+                </>
+              ) : (
+                <>
+                  <div className="absolute inset-0 rounded-full border-4 border-green-500 scale-110 transition-all duration-300 animate-pulse"></div>
+                  <span className="text-green-500 text-3xl font-mono animate-ping">🏁</span>
+                </>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h2 className="font-display text-xl text-white tracking-[3px] font-bold">
+                {matchmakingStatus === 'queued' ? '尋找對手中' : '配對成功！'}
+              </h2>
+              <p className="text-xs text-[#a88a6d] font-body tracking-wider leading-relaxed">
+                {matchmakingStatus === 'queued'
+                  ? '正在搜尋同時間加入佇列的挑戰者...'
+                  : '正在載入戰場，請做好戰鬥準備！'}
+              </p>
+            </div>
+
+            {matchmakingStatus === 'queued' && (
+              <div className="flex flex-col items-center gap-4 w-full">
+                <div className="font-mono text-3xl text-white font-bold tracking-wider">
+                  {formatTime(matchmakingTime)}
+                </div>
+                <Button
+                  variant="primary-outline"
+                  onClick={cancelMatchmaking}
+                  className="px-6 py-2 rounded-lg text-xs"
+                >
+                  取消配對
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

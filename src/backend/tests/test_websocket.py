@@ -116,3 +116,38 @@ def test_websocket_attack_reduces_hp():
                 msg = json.loads(ws.receive_text())
                 assert msg["type"] == "attack"
                 assert msg["damage"] == 20
+
+
+def test_matchmaking_queue():
+    """Two players connecting to the queue WS should be matched together."""
+    app.dependency_overrides[get_session] = _ws_test_session
+
+    with TestClient(app) as client:
+        # Register user 1
+        reg1 = client.post("/api/auth/register", json={"username": "user1", "password": "pw"})
+        t1 = reg1.json()["access_token"]
+
+        # Register user 2
+        reg2 = client.post("/api/auth/register", json={"username": "user2", "password": "pw"})
+        t2 = reg2.json()["access_token"]
+
+        # Connect user 1 to queue
+        with client.websocket_connect(f"/ws/queue?token={t1}") as ws1:
+            msg1 = json.loads(ws1.receive_text())
+            assert msg1["type"] == "queued"
+
+            # Connect user 2 to queue
+            with client.websocket_connect(f"/ws/queue?token={t2}") as ws2:
+                # User 2 should trigger a match immediately
+                msg2 = json.loads(ws2.receive_text())
+                assert msg2["type"] == "match_found"
+                assert msg2["opponent"] == "user1"
+                match_id = msg2["match_id"]
+                assert match_id is not None
+
+                # User 1 should also receive the match_found message
+                msg1_match = json.loads(ws1.receive_text())
+                assert msg1_match["type"] == "match_found"
+                assert msg1_match["opponent"] == "user2"
+                assert msg1_match["match_id"] == match_id
+

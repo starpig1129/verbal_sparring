@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.backend.core.database import get_session
 from src.backend.models import Match, MatchStatus, Player
-from src.backend.schemas.match import CreateMatchRequest, MatchResponse
+from src.backend.schemas.match import CreateMatchRequest, MatchResponse, PlayerMatchmakingResponse
 from src.backend.services.auth import get_current_player
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
@@ -61,3 +61,31 @@ async def create_match(
         opponent=req.opponent,
         is_npc=is_npc,
     )
+
+
+@router.get("/players", response_model=list[PlayerMatchmakingResponse])
+async def list_other_players(
+    db: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_player),
+) -> list[PlayerMatchmakingResponse]:
+    """Get a list of all other players in the system for matchmaking."""
+    from src.backend.api.ws.battle_ws import active_connections_count
+
+    current_uuid = uuid.UUID(current["sub"])
+    result = await db.execute(
+        select(Player).where(Player.id != current_uuid).order_by(Player.username)
+    )
+    players = result.scalars().all()
+
+    return [
+        PlayerMatchmakingResponse(
+            id=str(p.id),
+            username=p.username,
+            wins=p.wins,
+            losses=p.losses,
+            total_damage=p.total_damage,
+            is_online=p.username in active_connections_count and active_connections_count[p.username] > 0,
+        )
+        for p in players
+    ]
+

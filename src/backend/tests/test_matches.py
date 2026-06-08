@@ -76,3 +76,23 @@ async def test_create_match_self(client: AsyncClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 400
+
+
+async def test_list_other_players(client: AsyncClient) -> None:
+    """Listing other players should return the list of players except current user."""
+    t1 = await _register_and_token(client, "list_user1")
+    t2 = await _register_and_token(client, "list_user2")
+
+    # User 1 queries
+    resp = await client.get(
+        "/api/matches/players",
+        headers={"Authorization": f"Bearer {t1}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    # Should contain list_user2 but NOT list_user1
+    usernames = [p["username"] for p in data]
+    assert "list_user2" in usernames
+    assert "list_user1" not in usernames
+

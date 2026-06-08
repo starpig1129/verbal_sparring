@@ -2,7 +2,7 @@
 import { motion } from 'framer-motion'
 
 type SystemProps = { kind: 'system'; displayText: string }
-type AttackProps = { kind: 'attack'; sender: string; displayText: string; damage: number; isNpc: boolean }
+type AttackProps = { kind: 'attack'; sender: string; displayText: string; damage: number; isNpc: boolean; isPending?: boolean }
 type RefereeProps = { kind: 'referee'; displayText: string }
 
 type Props = SystemProps | AttackProps | RefereeProps
@@ -32,9 +32,13 @@ export default function MessageBubble(props: Props) {
           {props.sender}
         </span>
         <span className="text-[#fff0d4] font-body text-sm md:text-base flex-1 leading-relaxed">{props.displayText}</span>
-        <span className="bg-[#2a1100] border border-[#ff4400]/40 text-[#ff8800] px-2.5 py-0.5 font-mono text-xs rounded whitespace-nowrap flex-shrink-0 shadow-[0_0_6px_rgba(255,68,0,0.15)]">
-          -<b className="text-white text-sm font-bold ml-0.5">{props.damage}</b>
-        </span>
+        {props.isPending ? (
+          <span className="text-[#4a3f28] font-mono text-xs whitespace-nowrap flex-shrink-0 animate-pulse">…</span>
+        ) : (
+          <span className="bg-[#2a1100] border border-[#ff4400]/40 text-[#ff8800] px-2.5 py-0.5 font-mono text-xs rounded whitespace-nowrap flex-shrink-0 shadow-[0_0_6px_rgba(255,68,0,0.15)]">
+            -<b className="text-white text-sm font-bold ml-0.5">{props.damage}</b>
+          </span>
+        )}
       </motion.div>
     )
   }

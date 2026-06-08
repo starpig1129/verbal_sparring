@@ -1,5 +1,5 @@
 // src/frontend/src/pages/BattlePage.tsx
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { motion, useAnimation } from 'framer-motion'
 import { useGameState } from '../hooks/useGameState'
@@ -21,8 +21,13 @@ export default function BattlePage() {
   const token: string = location.state?.token ?? ctxToken
   const myUsername: string = location.state?.myUsername ?? ctxUsername
 
-  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage } = useGameState(myUsername)
+  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry } = useGameState(myUsername)
   const { sendAttack } = useWebSocket(matchId!, myUsername, token, handleMessage)
+
+  const handleSend = useCallback((payload: { text: string; image?: string }) => {
+    if (payload.text) addOptimisticEntry(payload.text)
+    sendAttack(payload)
+  }, [addOptimisticEntry, sendAttack])
   const shakeControls = useAnimation()
 
   const myHp = hp[myUsername] ?? 100
@@ -83,7 +88,7 @@ export default function BattlePage() {
       <TurnIndicator isMyTurn={isMyTurn} />
 
       {/* Input */}
-      <AttackInput onSend={sendAttack} disabled={!isMyTurn} />
+      <AttackInput onSend={handleSend} disabled={!isMyTurn} />
 
       {/* Damage number */}
       <DamageNumber damageEvent={lastDamageEvent} />

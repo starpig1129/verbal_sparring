@@ -14,6 +14,13 @@ export function useGameState(myPlayerId: string) {
     return ++idCounter.current
   }
 
+  const addOptimisticEntry = useCallback((text: string) => {
+    setChatLog(prev => [...prev, {
+      id: nextId(), kind: 'attack', sender: myPlayerId,
+      displayText: text, damage: 0, isNpc: false, isPending: true,
+    }])
+  }, [myPlayerId])
+
   const handleMessage = useCallback((msg: ServerMessage) => {
     if (msg.type === 'system') {
       setHp(msg.hp_status)
@@ -22,15 +29,25 @@ export function useGameState(myPlayerId: string) {
     } else if (msg.type === 'attack') {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
-      // Only trigger damage event when current player takes damage
-      if (msg.sender !== myPlayerId) {
+      if (msg.sender === myPlayerId) {
+        // Replace the optimistic pending entry with the confirmed entry + referee
+        setChatLog(prev => {
+          const withoutPending = prev.filter(
+            e => !(e.kind === 'attack' && e.isPending && e.sender === myPlayerId)
+          )
+          return [...withoutPending,
+            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
+            { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
+          ]
+        })
+      } else {
         setLastDamageEvent({ damage: msg.damage, id: nextId() })
+        const attackId = nextId()
+        setChatLog(prev => [...prev,
+          { id: attackId, kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
+          { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
+        ])
       }
-      const attackId = nextId()
-      setChatLog(prev => [...prev,
-        { id: attackId, kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
-        { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
-      ])
     } else if (msg.type === 'npc_attack') {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
@@ -52,6 +69,6 @@ export function useGameState(myPlayerId: string) {
     hp, currentTurn,
     isMyTurn: currentTurn === myPlayerId,
     chatLog, gameOver, lastDamageEvent,
-    handleMessage,
+    handleMessage, addOptimisticEntry,
   }
 }

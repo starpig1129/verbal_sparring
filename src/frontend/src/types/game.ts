@@ -13,7 +13,7 @@ export type ServerMessage =
 
 export type ChatEntry =
   | { id: number; kind: 'system'; displayText: string }
-  | { id: number; kind: 'attack'; sender: string; displayText: string; damage: number; isNpc: boolean }
+  | { id: number; kind: 'attack'; sender: string; displayText: string; damage: number; isNpc: boolean; isPending?: boolean }
   | { id: number; kind: 'referee'; displayText: string }
 
 export type LeaderboardEntry = {

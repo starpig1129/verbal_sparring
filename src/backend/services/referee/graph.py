@@ -25,6 +25,7 @@ class RefereeState(TypedDict):
     Attributes:
         original_text: The player's raw attack text.
         image_b64: Optional base-64 encoded image attached to the attack.
+        context: Optional game context dict (round_number, hp, recent exchanges).
         raw_response: Raw string returned by the Ollama API.
         damage: Final damage value (clamped to 10–30).
         comment: Referee's short taunt comment (max 40 chars).
@@ -33,6 +34,7 @@ class RefereeState(TypedDict):
 
     original_text: str
     image_b64: str | None
+    context: dict
     raw_response: str
     damage: int
     comment: str
@@ -77,12 +79,14 @@ async def _call_ollama(messages: list[dict]) -> str:
             return resp.json()["message"]["content"].strip()
 
 
-def _build_messages(text: str, image_b64: str | None) -> list[dict]:
+def _build_messages(text: str, image_b64: str | None, context: dict | None = None) -> list[dict]:
     """Construct the Ollama chat messages list with few-shot examples.
 
     Args:
         text: The player's attack text.
         image_b64: Optional base-64 encoded image (data URI format expected).
+        context: Optional game context with round_number, attacker_hp, defender_hp,
+                 recent_exchanges, and attacker_name.
 
     Returns:
         List of message dicts ready to send to the Ollama chat API.
@@ -95,18 +99,30 @@ def _build_messages(text: str, image_b64: str | None) -> list[dict]:
         msgs.append({"role": "user", "content": f"玩家發言：「{player_text}」"})
         msgs.append({"role": "assistant", "content": json_out})
 
+    situation = ""
+    if context:
+        r = context.get("round_number", 1)
+        a_hp = context.get("attacker_hp", 100)
+        d_hp = context.get("defender_hp", 100)
+        attacker = context.get("attacker_name", "玩家")
+        recent = context.get("recent_exchanges", [])
+        situation = f"【第{r}回合｜{attacker} HP {a_hp} vs 對手 HP {d_hp}】\n"
+        if recent:
+            dialogue = "、".join(f"「{x}」" for x in recent[-3:])
+            situation += f"【近期交鋒】{dialogue}\n"
+
     if image_b64:
         instruction = (
-            f"玩家丟出圖嗆對手，附帶：「{text}」。認出圖裡的東西後毒舌評分。"
+            f"{situation}玩家丟出圖嗆對手，附帶：「{text}」。認出圖裡的東西後毒舌評分。"
             if text
-            else "玩家丟出圖嗆對手。認出圖裡的東西後毒舌評分。"
+            else f"{situation}玩家丟出圖嗆對手。認出圖裡的東西後毒舌評分。"
         )
         content: list[dict] | str = [
             {"type": "image_url", "image_url": {"url": image_b64}},
             {"type": "text", "text": instruction},
         ]
     else:
-        content = f"玩家發言：「{text}」"
+        content = f"{situation}玩家發言：「{text}」"
     msgs.append({"role": "user", "content": content})
     return msgs
 
@@ -155,7 +171,7 @@ def _extract_json(text: str) -> dict | None:
 
 async def _node_call_ollama(state: RefereeState) -> dict:
     """LangGraph node: call Ollama and store raw response in state."""
-    msgs = _build_messages(state["original_text"], state.get("image_b64"))
+    msgs = _build_messages(state["original_text"], state.get("image_b64"), state.get("context"))
     raw = await _call_ollama(msgs)
     return {"raw_response": raw}
 
@@ -195,12 +211,14 @@ _graph.add_edge("validate_clamp", END)
 _referee_graph = _graph.compile()
 
 
-async def run_referee(text: str, image_b64: str | None) -> dict:
+async def run_referee(text: str, image_b64: str | None, context: dict | None = None) -> dict:
     """Run the full referee LangGraph pipeline for a player's attack.
 
     Args:
         text: The player's attack text input.
         image_b64: Optional base-64 encoded image (data URI format).
+        context: Optional game context for contextual scoring. Keys:
+            round_number, attacker_hp, defender_hp, attacker_name, recent_exchanges.
 
     Returns:
         Dict with keys:
@@ -212,6 +230,7 @@ async def run_referee(text: str, image_b64: str | None) -> dict:
         initial: RefereeState = {
             "original_text": text,
             "image_b64": image_b64,
+            "context": context or {},
             "raw_response": "",
             "damage": 10,
             "comment": "",

@@ -211,18 +211,29 @@ async def battle_ws(
                 room.round_number += 1
                 room.record_attack(text or "（圖片）")
 
+                # Determine target for HP context before calling referee
+                if is_npc:
+                    ref_target = "NPC"
+                else:
+                    other = [p for p in room.hp if p != player_id]
+                    ref_target = other[0] if other else player_id
+
+                ref_context = {
+                    "round_number": room.round_number,
+                    "attacker_name": player_id,
+                    "attacker_hp": room.hp.get(player_id, 100),
+                    "defender_hp": room.hp.get(ref_target, 100),
+                    "recent_exchanges": list(room.recent_attacks),
+                }
+
                 # Run referee (with robust timeout and fallback inside)
-                ref = await run_referee(text, image_b64)
+                ref = await run_referee(text, image_b64, ref_context)
                 damage = ref["damage"]
                 comment = ref["comment"]
                 display_text = ref["display_text"]
                 print(f"[WS PROCESS] Referee output - Damage: {damage}, Comment: {comment}, DisplayText: {display_text}", flush=True)
 
-                if is_npc:
-                    target = "NPC"
-                else:
-                    other = [p for p in room.hp if p != player_id]
-                    target = other[0] if other else player_id
+                target = ref_target
 
                 room.hp[target] = max(0, room.hp[target] - damage)
 
@@ -284,6 +295,20 @@ async def battle_ws(
                     )
                     continue
 
+                if is_npc:
+                    # Update NPC memory with every player attack so context builds up
+                    try:
+                        asyncio.create_task(
+                            update_npc_memory(
+                                db,
+                                attacker_player_id,
+                                text or None,
+                                damage,
+                            )
+                        )
+                    except RuntimeError:
+                        pass
+
                 if is_npc and room.current_turn == "NPC":
                     print(f"[WS PROCESS] Running NPC turn vs {player_id}...", flush=True)
                     npc_text = await run_npc_turn(
@@ -296,8 +321,15 @@ async def battle_ws(
                         recent_opponent_attacks=room.recent_attacks,
                     )
                     print(f"[WS PROCESS] NPC attack generated: {npc_text}", flush=True)
-                    
-                    npc_ref = await run_referee(npc_text, None)
+
+                    npc_context = {
+                        "round_number": room.round_number + 1,
+                        "attacker_name": "NPC",
+                        "attacker_hp": room.hp.get("NPC", 100),
+                        "defender_hp": room.hp.get(player_id, 100),
+                        "recent_exchanges": list(room.recent_attacks),
+                    }
+                    npc_ref = await run_referee(npc_text, None, npc_context)
                     npc_damage = npc_ref["damage"]
                     npc_comment = npc_ref["comment"]
                     npc_display_text = npc_ref["display_text"]
@@ -332,17 +364,6 @@ async def battle_ws(
 
                     if room.hp.get(player_id, 100) <= 0:
                         print(f"[WS MATCH OVER] NPC defeated player {player_id}", flush=True)
-                        try:
-                            asyncio.create_task(
-                                update_npc_memory(
-                                    db,
-                                    attacker_player_id,
-                                    room.recent_attacks[-1] if room.recent_attacks else None,
-                                    npc_damage,
-                                )
-                            )
-                        except RuntimeError:
-                            pass
                         await _finish_match(db, match_id, None)
                         await room.broadcast(
                             {

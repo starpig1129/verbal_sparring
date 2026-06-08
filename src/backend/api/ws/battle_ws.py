@@ -284,6 +284,7 @@ async def battle_ws(
                     await room.broadcast(
                         {
                             "type": "npc_attack",
+                            "npc_text": state["npc_text"],
                             "display_text": state["npc_ref_display_text"],
                             "damage": state["npc_damage"],
                             "referee_comment": state["npc_ref_comment"],

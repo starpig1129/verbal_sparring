@@ -54,8 +54,8 @@ export function useGameState(myPlayerId: string) {
       setLastDamageEvent({ damage: msg.damage, id: nextId() })
       const attackId = nextId()
       setChatLog(prev => [...prev,
-        { id: attackId, kind: 'attack', sender: 'NPC', displayText: msg.display_text, damage: msg.damage, isNpc: true },
-        { id: nextId(), kind: 'referee', displayText: msg.referee_comment },
+        { id: attackId, kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: msg.damage, isNpc: true },
+        { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
       ])
     } else if (msg.type === 'game_over') {
       setGameOver(msg.winner)

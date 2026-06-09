@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EFF6FF" />
+    </linearGradient>
+    <!-- Card drop shadow -->
+    <filter id="shadowFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)" />
+
+  <!-- Decorative curves -->
+  <path d="M 0 0 Q 300 150 960 50 T 1920 0 L 1920 120 L 0 120 Z" fill="#E0F2FE" opacity="0.4" />
+  <circle cx="1800" cy="980" r="300" fill="#DBEAFE" opacity="0.3" />
+  
+  <!-- Slide Header Banner -->
+  <text x="80" y="80" fill="#3B82F6" font-size="22" font-weight="800" letter-spacing="2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">期末報告 | 基於多 LoRA 協同對抗微調之「多流派毒舌對決」Web 遊戲系統</text>
+  <text x="80" y="160" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">全棧部署架構與實時對局引擎</text>
+  
+  <!-- Footer -->
+  <line x1="80" y1="990" x2="1840" y2="990" stroke="#E2E8F0" stroke-width="2" />
+  <text x="80" y="1030" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NTNU AGI &amp; Robotics Research | Reinforcement Learning &amp; Cognitive NLP</text>
+  <text x="1800" y="1030" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Page 9 / 10</text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="80" y="240" width="840" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 80 260 A 20 20 0 0 1 100 240 L 900 240 A 20 20 0 0 1 920 260 L 920 260 L 80 260 Z" fill="#3B82F6" />
+    <!-- Title -->
+    <text x="120" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Docker 服務容器化關係圖 (docker-compose)</text>
+  </g>
+<rect x="120" y="340" width="310" height="150" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2" rx="10" /><text x="140" y="380" fill="#0F172A" font-size="20" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Frontend (React Vite)</text><text x="140" y="415" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- Port 3000 mapping</text><text x="140" y="445" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- TypeScript &amp; Tailwind UI</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="440" y1="415" x2="530" y2="415" stroke="#3B82F6" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="530,415 516.143593539449,423.0 516.143593539449,407.0" fill="#3B82F6" />
+    <text x="485.0" y="403.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">WebSocket</text>
+  </g>
+
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="530" y1="445" x2="440" y2="445" stroke="#10B981" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="440,445 453.856406460551,437.0 453.856406460551,453.0" fill="#10B981" />
+    <text x="485.0" y="433.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Battle sync</text>
+  </g>
+<rect x="540" y="340" width="340" height="150" fill="#FEF3C7" stroke="#F97316" stroke-width="2" rx="10" /><text x="560" y="380" fill="#0F172A" font-size="20" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Backend (FastAPI Engine)</text><text x="560" y="415" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- Port 8000 mapping</text><text x="560" y="445" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- WebSocket異步對戰</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="710" y1="500" x2="710" y2="575" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="710,575 702.0,561.143593539449 718.0,561.143593539449" fill="#64748B" />
+    <text x="710.0" y="525.5" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SQLAlchemy</text>
+  </g>
+
+  <g>
+    <ellipse cx="710" cy="610" rx="170" ry="20" fill="#E2E8F0" />
+    <rect x="540" y="610" width="340" height="80" fill="#F1F5F9" />
+    <ellipse cx="710" cy="690" rx="170" ry="20" fill="#E2E8F0" />
+    <path d="M 540 610 L 540 690 A 170 20 0 0 0 880 690 L 880 610" fill="none" stroke="#3B82F6" stroke-width="3" />
+    <ellipse cx="710" cy="610" rx="170" ry="20" fill="#DBEAFE" stroke="#3B82F6" stroke-width="3" />
+    <!-- Label -->
+    <text x="710" y="655" fill="#0F172A" font-size="18" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">PostgreSQL Database</text>
+  </g>
+
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="540" y1="650" x2="275" y2="650" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="275,650 288.856406460551,642.0 288.856406460551,658.0" fill="#64748B" />
+    <text x="407.5" y="638.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NpcMemory Cache</text>
+  </g>
+<rect x="120" y="550" width="310" height="150" fill="#ECFDF5" stroke="#10B981" stroke-width="2" rx="10" /><text x="140" y="590" fill="#0F172A" font-size="20" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Inference Server (vLLM)</text><text x="140" y="625" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- Port 8060 / API endpoint</text><text x="140" y="655" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- Dynamic LoRA Hot-swapping</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="540" y1="460" x2="440" y2="580" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="440,580 442.72488501467586,564.2337385009383 455.0164254882339,574.47668889557" fill="#64748B" />
+    <text x="490.0" y="508.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Inference API</text>
+  </g>
+<rect x="120" y="740" width="760" height="140" fill="#F1F5F9" rx="10" /><text x="140" y="780" fill="#0F172A" font-size="16" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">動態加載 PEFT 機制 (Dynamic PEFT Adapter Loading)：</text><text x="140" y="815" fill="#475569" font-size="15" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- 使用 PEFT 的 `model.load_adapter()` 和 `model.set_adapter()`，</text><text x="140" y="845" fill="#475569" font-size="15" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">  使同一個 GPU 進程能同時服務對手與裁判，大幅壓縮顯存與推理硬體開銷。</text>
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="990" y="240" width="850" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 990 260 A 20 20 0 0 1 1010 240 L 1820 240 A 20 20 0 0 1 1840 260 L 1840 260 L 990 260 Z" fill="#F97316" />
+    <!-- Title -->
+    <text x="1030" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">實時對決 WebSocket 異步對抗引擎</text>
+  </g>
+
+  <circle cx="1040" cy="352" r="6" fill="#3B82F6" />
+  <text x="1065" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">多人對決協定 (battle_ws.py)：</tspan><tspan fill="#475569">WebSocket 雙向通信，實時連線配對</tspan>
+  </text>
+
+  <circle cx="1040" cy="432" r="6" fill="#3B82F6" />
+  <text x="1065" y="440" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">異步調度管道 (State Graph)：</tspan><tspan fill="#475569">解決大模型推理線程阻塞 (ainvoke)</tspan>
+  </text>
+
+  <circle cx="1040" cy="512" r="6" fill="#3B82F6" />
+  <text x="1065" y="520" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">會話狀態管理 (battle_session.py)：</tspan><tspan fill="#475569">負責對局狀態機控制</tspan>
+  </text>
+<rect x="1040" y="580" width="750" height="290" fill="#FEF3C7" rx="10" /><text x="1070" y="630" fill="#0F172A" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">BattleSession 對局機制：</text><text x="1070" y="680" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">1. 雙方血量 HP 扣減與死亡判定</text><text x="1070" y="725" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">2. 攻防 Turn-taking 狀態機輪替</text><text x="1070" y="770" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">3. 裁判打分廣播：「damage, referee_comment」</text><text x="1070" y="815" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">4. ORM 記錄持久化寫入 rounds 和 matches 表</text></svg>

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EFF6FF" />
+    </linearGradient>
+    <!-- Card drop shadow -->
+    <filter id="shadowFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)" />
+
+  <!-- Decorative curves -->
+  <path d="M 0 0 Q 300 150 960 50 T 1920 0 L 1920 120 L 0 120 Z" fill="#E0F2FE" opacity="0.4" />
+  <circle cx="1800" cy="980" r="300" fill="#DBEAFE" opacity="0.3" />
+  
+  <!-- Slide Header Banner -->
+  <text x="80" y="80" fill="#3B82F6" font-size="22" font-weight="800" letter-spacing="2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">期末報告 | 基於多 LoRA 協同對抗微調之「多流派毒舌對決」Web 遊戲系統</text>
+  <text x="80" y="160" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NPC 第二階段訓練：DPO 偏好對齊</text>
+  
+  <!-- Footer -->
+  <line x1="80" y1="990" x2="1840" y2="990" stroke="#E2E8F0" stroke-width="2" />
+  <text x="80" y="1030" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NTNU AGI &amp; Robotics Research | Reinforcement Learning &amp; Cognitive NLP</text>
+  <text x="1800" y="1030" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Page 6 / 10</text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="80" y="240" width="780" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 80 260 A 20 20 0 0 1 100 240 L 840 240 A 20 20 0 0 1 860 260 L 860 260 L 80 260 Z" fill="#3B82F6" />
+    <!-- Title -->
+    <text x="120" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">DPO 偏好資料生成與對齊機制</text>
+  </g>
+
+  <circle cx="130" cy="352" r="6" fill="#3B82F6" />
+  <text x="155" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">偏好配對機制 (Chosen vs Rejected)：</tspan><tspan fill="#475569"></tspan>
+  </text>
+<text x="150" y="410" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">針對同一個挑釁 Prompt，SFT 產生 3 個候選句。由 Qwen 27B 打分：</text><rect x="130" y="440" width="700" height="100" fill="#ECFDF5" rx="10" stroke="#10B981" stroke-width="1.5" /><text x="160" y="480" fill="#10B981" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Chosen (優選反擊，分數最高，字數符合且辣度高)：</text><text x="160" y="515" fill="#0F172A" font-size="16" font-family="monospace">「看三小？腦袋長在屁股上喔？靠北滾啦！」 (48 pts)</text><rect x="130" y="560" width="700" height="100" fill="#FEF2F2" rx="10" stroke="#EF4444" stroke-width="1.5" /><text x="160" y="600" fill="#EF4444" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Rejected (劣等反擊，分數最低，溫和或長篇大論)：</text><text x="160" y="635" fill="#0F172A" font-size="16" font-family="monospace">「好啦都是我的錯，你要這樣想我也沒辦法。」 (12 pts)</text>
+  <circle cx="130" cy="692" r="6" fill="#3B82F6" />
+  <text x="155" y="700" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">1. 毒舌攻擊點數暴增 (+5.17)：</tspan><tspan fill="#475569">平均毒舌分由 SFT 34.97 提升至 DPO 40.13。</tspan>
+  </text>
+
+  <circle cx="130" cy="762" r="6" fill="#3B82F6" />
+  <text x="155" y="770" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">2. 物理字數強大約束：</tspan><tspan fill="#475569">對長回覆施加 penalty，提升長度限制遵循率。</tspan>
+  </text>
+
+  <circle cx="130" cy="832" r="6" fill="#3B82F6" />
+  <text x="155" y="840" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">3. 保持詞彙多樣度 (Entropy)：</tspan><tspan fill="#475569">香農熵微增 (7.17)，無發生模式崩塌 (Mode Collapse)。</tspan>
+  </text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="890" y="240" width="950" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 890 260 A 20 20 0 0 1 910 240 L 1820 240 A 20 20 0 0 1 1840 260 L 1840 260 L 890 260 Z" fill="#10B981" />
+    <!-- Title -->
+    <text x="930" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SFT vs DPO 評測指標橫向對比圖表</text>
+  </g>
+<image x="930" y="330" width="870" height="540" href="../player_benchmark_comparison.png" /></svg>

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EFF6FF" />
+    </linearGradient>
+    <!-- Card drop shadow -->
+    <filter id="shadowFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)" />
+
+  <!-- Decorative curves -->
+  <path d="M 0 0 Q 300 150 960 50 T 1920 0 L 1920 120 L 0 120 Z" fill="#E0F2FE" opacity="0.4" />
+  <circle cx="1800" cy="980" r="300" fill="#DBEAFE" opacity="0.3" />
+  
+  <!-- Slide Header Banner -->
+  <text x="80" y="80" fill="#3B82F6" font-size="22" font-weight="800" letter-spacing="2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">期末報告 | 基於多 LoRA 協同對抗微調之「多流派毒舌對決」Web 遊戲系統</text>
+  <text x="80" y="160" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">提示詞工程與 Neuro-Symbolic 限制解碼</text>
+  
+  <!-- Footer -->
+  <line x1="80" y1="990" x2="1840" y2="990" stroke="#E2E8F0" stroke-width="2" />
+  <text x="80" y="1030" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NTNU AGI &amp; Robotics Research | Reinforcement Learning &amp; Cognitive NLP</text>
+  <text x="1800" y="1030" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Page 8 / 10</text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="80" y="240" width="920" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 80 260 A 20 20 0 0 1 100 240 L 980 240 A 20 20 0 0 1 1000 260 L 1000 260 L 80 260 Z" fill="#3B82F6" />
+    <!-- Title -->
+    <text x="120" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">真實進入裁判(Referee)模型的 Prompt 結構與 Few-Shots</text>
+  </g>
+<rect x="120" y="340" width="840" height="230" fill="#F8FAFC" stroke="#E2E8F0" rx="8" /><text x="140" y="375" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">[System Message] (System Prompt 與 JSON 限制約束)</text><text x="140" y="410" fill="#475569" font-size="15" font-family="monospace">你是一位無情、機智且挑剔的「華語毒舌評審」。請評估玩家攻擊發言。</text><text x="140" y="435" fill="#475569" font-size="15" font-family="monospace">請根據以下標準進行評審：</text><text x="140" y="460" fill="#475569" font-size="15" font-family="monospace">1. 傷害評分 (damage): 給予 1 到 50 的整數評分。 2. 毒舌評語 (referee_comment): &lt; 25字。</text><text x="140" y="485" fill="#475569" font-size="15" font-family="monospace">請嚴格輸出符合以下 JSON 格式的內容，不要包含 any extra text：</text><text x="140" y="510" fill="#0F172A" font-size="15" font-weight="700" font-family="monospace">{"damage": 傷害整數, "referee_comment": "你的辛辣評語"}</text><rect x="120" y="590" width="840" height="300" fill="#EFF6FF" stroke="#3B82F6" rx="8" /><text x="140" y="625" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">[Few-Shot 示範輪次 (In-Context Learning)]</text><text x="140" y="660" fill="#475569" font-size="14" font-family="monospace">Human: 玩家發言：「你長得像被卡車碾過的便當」</text><text x="140" y="685" fill="#10B981" font-size="14" font-weight="700" font-family="monospace">AI: {"damage": 24, "referee_comment": "畫面有了，扣分扣得理所當然"}</text><line x1="140" y1="710" x2="920" y2="710" stroke="#E2E8F0" stroke-width="1" /><text x="140" y="735" fill="#0F172A" font-size="15" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">[Current Active Input - 實際推理內容]</text><text x="140" y="765" fill="#475569" font-size="14" font-family="monospace">Human: [Round 3 | Attacker HP: 60 | Opponent HP: 85]</text><text x="140" y="785" fill="#475569" font-size="14" font-family="monospace">[Recent battle dialogue]:</text><text x="140" y="805" fill="#475569" font-size="14" font-family="monospace">- opponent: "演技好是因為要把你演成單方面屠殺。"</text><text x="140" y="825" fill="#475569" font-size="14" font-family="monospace">- npc: "演得這麼用力，是怕輸了連腦袋都沒得用嗎？"</text><text x="140" y="845" fill="#0F172A" font-size="14" font-weight="700" font-family="monospace">玩家發言：「看三小？腦袋長在屁股上喔？靠北滾啦！」</text><rect x="140" y="865" width="800" height="20" fill="#D1FAE5" rx="3" /><text x="150" y="880" fill="#0F172A" font-size="13" font-family="monospace">&gt; Output (Gemma-LoRA): {"damage": 48, "referee_comment": "髒度拉滿，屁股這詞挺有韻律"}</text>
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="1030" y="240" width="810" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 1030 260 A 20 20 0 0 1 1050 240 L 1820 240 A 20 20 0 0 1 1840 260 L 1840 260 L 1030 260 Z" fill="#10B981" />
+    <!-- Title -->
+    <text x="1070" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Neuro-Symbolic: 三段式 JSON 容錯解析流</text>
+  </g>
+<rect x="1070" y="340" width="730" height="70" fill="#E0F2FE" stroke="#3B82F6" stroke-width="2" rx="10" /><text x="1100" y="380" fill="#0F172A" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Step 1. json.loads(raw_response.strip())</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1435" y1="410" x2="1435" y2="450" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1435,450 1427.0,436.143593539449 1443.0,436.143593539449" fill="#64748B" />
+    <text x="1435.0" y="418.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Decode Error</text>
+  </g>
+<rect x="1070" y="450" width="730" height="70" fill="#BAE6FD" stroke="#3B82F6" stroke-width="2" rx="10" /><text x="1100" y="490" fill="#0F172A" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Step 2. 去除 Markdown Fences (```json ... ```)</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1435" y1="520" x2="1435" y2="560" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1435,560 1427.0,546.143593539449 1443.0,546.143593539449" fill="#64748B" />
+    <text x="1435.0" y="528.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Decode Error</text>
+  </g>
+<rect x="1070" y="560" width="730" height="330" fill="#FEF3C7" stroke="#F97316" stroke-width="2" rx="10" /><text x="1100" y="600" fill="#0F172A" font-size="20" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Step 3. Balanced Brace Parser (括號配對深度掃描)</text><circle cx="1170" cy="710" r="45" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" /><text x="1170" y="715" fill="#0F172A" font-size="14" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">深度 depth = 0</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1220" y1="710" x2="1375" y2="710" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1375,710 1361.143593539449,718.0 1361.143593539449,702.0" fill="#64748B" />
+    <text x="1297.5" y="698.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">遇到「{」depth++ (記錄起點)</text>
+  </g>
+<circle cx="1435" cy="710" r="45" fill="#FDE68A" stroke="#F97316" stroke-width="2" /><text x="1435" y="715" fill="#0F172A" font-size="14" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">深度 depth &gt; 0</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1490" y1="710" x2="1645" y2="710" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1645,710 1631.143593539449,718.0 1631.143593539449,702.0" fill="#64748B" />
+    <text x="1567.5" y="698.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">遇到「}」depth--</text>
+  </g>
+<circle cx="1700" cy="710" r="45" fill="#D1FAE5" stroke="#10B981" stroke-width="2" /><text x="1700" y="715" fill="#0F172A" font-size="14" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">合適 JSON 區段</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1700" y1="760" x2="1435" y2="780" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1435,780 1448.215050005575,770.9798861786475 1449.419172717106,786.9345121064332" fill="#64748B" />
+    <text x="1567.5" y="758.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">截取 json.loads()</text>
+  </g>
+<rect x="1100" y="800" width="670" height="70" fill="#D1FAE5" stroke="#10B981" stroke-width="2" rx="8" /><text x="1120" y="840" fill="#0F172A" font-size="16" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">[後處置] validate_clamp(): 傷害強制 Clamping [10, 30] 且評語長度限制在 40 字內</text></svg>

@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EFF6FF" />
+    </linearGradient>
+    <!-- Card drop shadow -->
+    <filter id="shadowFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)" />
+
+  <!-- Decorative curves -->
+  <path d="M 0 0 Q 300 150 960 50 T 1920 0 L 1920 120 L 0 120 Z" fill="#E0F2FE" opacity="0.4" />
+  <circle cx="1800" cy="980" r="300" fill="#DBEAFE" opacity="0.3" />
+  
+  <!-- Slide Header Banner -->
+  <text x="80" y="80" fill="#3B82F6" font-size="22" font-weight="800" letter-spacing="2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">期末報告 | 基於多 LoRA 協同對抗微調之「多流派毒舌對決」Web 遊戲系統</text>
+  <text x="80" y="160" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">系統運行架構與實時數據流圖</text>
+  
+  <!-- Footer -->
+  <line x1="80" y1="990" x2="1840" y2="990" stroke="#E2E8F0" stroke-width="2" />
+  <text x="80" y="1030" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NTNU AGI &amp; Robotics Research | Reinforcement Learning &amp; Cognitive NLP</text>
+  <text x="1800" y="1030" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Page 3 / 10</text>
+
+  <g filter="url(#shadowFilter)">
+    <rect x="80" y="260" width="420" height="400" rx="12" ry="12" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" />
+    <path d="M 80 300 L 500 300 L 500 272 A 12 12 0 0 0 488 260 L 92 260 A 12 12 0 0 0 80 272 Z" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="2" />
+    <circle cx="105" cy="280" r="7" fill="#EF4444" />
+    <circle cx="125" cy="280" r="7" fill="#F97316" />
+    <circle cx="145" cy="280" r="7" fill="#10B981" />
+    <text x="290" y="285" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">React Frontend (Port 3000)</text>
+  </g>
+<rect x="110" y="340" width="360" height="20" fill="#E2E8F0" rx="3" /><rect x="110" y="380" width="160" height="80" fill="#FEE2E2" rx="10" /><text x="190" y="430" fill="#EF4444" font-size="20" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Opponent HP: 85</text><rect x="310" y="380" width="160" height="80" fill="#D1FAE5" rx="10" /><text x="390" y="430" fill="#10B981" font-size="20" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NPC HP: 100</text><rect x="110" y="480" width="360" height="100" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" rx="5" /><text x="130" y="510" fill="#0F172A" font-size="14" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">對手：「演技好是因為要把你演成單方面屠殺」</text><text x="130" y="540" fill="#3B82F6" font-size="14" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">[裁判打分] 傷害：46 | 評語：畫面有了，扣分扣得爽</text><rect x="110" y="600" width="280" height="40" fill="#FFFFFF" stroke="#E2E8F0" rx="5" /><text x="130" y="625" fill="#475569" font-size="14" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">輸入你的嘴砲反擊...</text><rect x="400" y="600" width="70" height="40" fill="#3B82F6" rx="5" /><text x="435" y="625" fill="#FFFFFF" font-size="14" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">發送</text>
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="520" y1="420" x2="710" y2="420" stroke="#3B82F6" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="710,420 696.143593539449,428.0 696.143593539449,412.0" fill="#3B82F6" />
+    <text x="615.0" y="408.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">1. 實時發言 / 梗圖</text>
+  </g>
+
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="710" y1="460" x2="520" y2="460" stroke="#10B981" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="520,460 533.856406460551,452.0 533.856406460551,468.0" fill="#10B981" />
+    <text x="615.0" y="448.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">4. 實時 HP 更新 / 蓋章</text>
+  </g>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="730" y="240" width="480" height="420" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 730 260 A 20 20 0 0 1 750 240 L 1190 240 A 20 20 0 0 1 1210 260 L 1210 260 L 730 260 Z" fill="#F97316" />
+    <!-- Title -->
+    <text x="770" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">FastAPI WebSocket 異步引擎</text>
+  </g>
+
+  <circle cx="770" cy="352" r="6" fill="#3B82F6" />
+  <text x="795" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">Room Manager:</tspan><tspan fill="#475569">多人對決房間與配對管理</tspan>
+  </text>
+
+  <circle cx="770" cy="412" r="6" fill="#3B82F6" />
+  <text x="795" y="420" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">Battle Session:</tspan><tspan fill="#475569">回合狀態機與 HP 扣減控制</tspan>
+  </text>
+
+  <circle cx="770" cy="472" r="6" fill="#3B82F6" />
+  <text x="795" y="480" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">LangGraph Pipeline:</tspan><tspan fill="#475569">動態調度 NPC / Referee 代理流程</tspan>
+  </text>
+
+  <circle cx="770" cy="532" r="6" fill="#3B82F6" />
+  <text x="795" y="540" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">Symbolic Constraint:</tspan><tspan fill="#475569">JSON 符號提取容錯層</tspan>
+  </text>
+
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="970" y1="680" x2="970" y2="740" stroke="#64748B" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="970,740 962.0,726.143593539449 978.0,726.143593539449" fill="#64748B" />
+    <text x="970.0" y="698.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">ORM (SQL)</text>
+  </g>
+
+  <g>
+    <ellipse cx="970" cy="780" rx="200" ry="20" fill="#E2E8F0" />
+    <rect x="770" y="780" width="400" height="120" fill="#F1F5F9" />
+    <ellipse cx="970" cy="900" rx="200" ry="20" fill="#E2E8F0" />
+    <path d="M 770 780 L 770 900 A 200 20 0 0 0 1170 900 L 1170 780" fill="none" stroke="#3B82F6" stroke-width="3" />
+    <ellipse cx="970" cy="780" rx="200" ry="20" fill="#DBEAFE" stroke="#3B82F6" stroke-width="3" />
+    <!-- Label -->
+    <text x="970" y="845" fill="#0F172A" font-size="18" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">PostgreSQL (NpcMemory)</text>
+  </g>
+
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1230" y1="420" x2="1420" y2="420" stroke="#3B82F6" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1420,420 1406.143593539449,428.0 1406.143593539449,412.0" fill="#3B82F6" />
+    <text x="1325.0" y="408.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">2. 戰況提示詞</text>
+  </g>
+
+  <g>
+    <!-- Arrow shaft -->
+    <line x1="1420" y1="460" x2="1230" y2="460" stroke="#10B981" stroke-width="3" stroke-dasharray="6,4" />
+    <!-- Arrow head -->
+    <polygon points="1230,460 1243.856406460551,452.0 1243.856406460551,468.0" fill="#10B981" />
+    <text x="1325.0" y="448.0" fill="#475569" font-size="16" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">3. 預測傷害 JSON</text>
+  </g>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="1440" y="240" width="400" height="420" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 1440 260 A 20 20 0 0 1 1460 240 L 1820 240 A 20 20 0 0 1 1840 260 L 1840 260 L 1440 260 Z" fill="#3B82F6" />
+    <!-- Title -->
+    <text x="1480" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Inference PEFT Engine</text>
+  </g>
+<rect x="1480" y="340" width="320" height="240" fill="#F1F5F9" stroke="#3B82F6" stroke-width="2" rx="10" /><text x="1640" y="380" fill="#0F172A" font-size="18" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Base Model (Gemma-4 4B)</text><rect x="1510" y="420" width="260" height="60" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2" rx="5" /><text x="1640" y="455" fill="#0F172A" font-size="16" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Player LoRA (NPC 嗆聲)</text><rect x="1510" y="500" width="260" height="60" fill="#D1FAE5" stroke="#10B981" stroke-width="2" rx="5" /><text x="1640" y="535" fill="#0F172A" font-size="16" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Referee LoRA (裁判打分)</text><text x="1640" y="620" fill="#475569" font-size="14" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">(在一個 GPU 進程內動態熱插拔載入)</text><rect x="80" y="940" width="1760" height="1" fill="#E2E8F0" /></svg>

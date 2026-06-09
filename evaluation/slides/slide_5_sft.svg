@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EFF6FF" />
+    </linearGradient>
+    <!-- Card drop shadow -->
+    <filter id="shadowFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)" />
+
+  <!-- Decorative curves -->
+  <path d="M 0 0 Q 300 150 960 50 T 1920 0 L 1920 120 L 0 120 Z" fill="#E0F2FE" opacity="0.4" />
+  <circle cx="1800" cy="980" r="300" fill="#DBEAFE" opacity="0.3" />
+  
+  <!-- Slide Header Banner -->
+  <text x="80" y="80" fill="#3B82F6" font-size="22" font-weight="800" letter-spacing="2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">期末報告 | 基於多 LoRA 協同對抗微調之「多流派毒舌對決」Web 遊戲系統</text>
+  <text x="80" y="160" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NPC 第一階段訓練：SFT 監督微調</text>
+  
+  <!-- Footer -->
+  <line x1="80" y1="990" x2="1840" y2="990" stroke="#E2E8F0" stroke-width="2" />
+  <text x="80" y="1030" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NTNU AGI &amp; Robotics Research | Reinforcement Learning &amp; Cognitive NLP</text>
+  <text x="1800" y="1030" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Page 5 / 10</text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="80" y="240" width="840" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 80 260 A 20 20 0 0 1 100 240 L 900 240 A 20 20 0 0 1 920 260 L 920 260 L 80 260 Z" fill="#3B82F6" />
+    <!-- Title -->
+    <text x="120" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SFT 訓練配置與超參數</text>
+  </g>
+
+  <circle cx="130" cy="352" r="6" fill="#3B82F6" />
+  <text x="155" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">基座模型 (Base Model)：</tspan><tspan fill="#475569">google/gemma-4-E4B-it (4B)</tspan>
+  </text>
+
+  <circle cx="130" cy="422" r="6" fill="#3B82F6" />
+  <text x="155" y="430" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">微調精度 (Precision)：</tspan><tspan fill="#475569">4-bit NF4 (Double Quant), BF16 Compute</tspan>
+  </text>
+
+  <circle cx="130" cy="492" r="6" fill="#3B82F6" />
+  <text x="155" y="500" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">適配器設定 (LoRA)：</tspan><tspan fill="#475569">Rank r=16, Alpha=32, Dropout=0.05</tspan>
+  </text>
+
+  <circle cx="130" cy="562" r="6" fill="#3B82F6" />
+  <text x="155" y="570" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">訓練量 (Epochs/Steps)：</tspan><tspan fill="#475569">3 Epochs, lr=2e-4, PagedAdamW 8bit</tspan>
+  </text>
+
+  <circle cx="130" cy="632" r="6" fill="#3B82F6" />
+  <text x="155" y="640" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">梯度積累 (Grad Accumulation)：</tspan><tspan fill="#475569">Per-device batch=2, Accumulation=4</tspan>
+  </text>
+<rect x="130" y="690" width="740" height="190" fill="#EFF6FF" rx="10" /><text x="160" y="735" fill="#0F172A" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">關鍵修復：排除 vision_tower 維度不相容</text><text x="160" y="775" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在 `LoraConfig` 中使用目標層正則表達式：</text><text x="160" y="815" fill="#3B82F6" font-size="16" font-family="monospace">target_modules = ".*language_model.*(q_proj|v_proj|...)"</text><text x="160" y="855" fill="#475569" font-size="15" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">主動跳過視覺投影層，防範 k-bit 準備與梯度回傳時的維度報錯。</text>
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="990" y="240" width="850" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 990 260 A 20 20 0 0 1 1010 240 L 1820 240 A 20 20 0 0 1 1840 260 L 1840 260 L 990 260 Z" fill="#F97316" />
+    <!-- Title -->
+    <text x="1030" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SFT 微調達成目標</text>
+  </g>
+
+  <circle cx="1040" cy="352" r="6" fill="#3B82F6" />
+  <text x="1065" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">1. 多輪對話格式擬合：</tspan><tspan fill="#475569">學會遵循 Gemini-it 標準對話 template。</tspan>
+  </text>
+
+  <circle cx="1040" cy="432" r="6" fill="#3B82F6" />
+  <text x="1065" y="440" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">2. 8 大流派風格掌握：</tspan><tspan fill="#475569">模型能辨識風格標記，並輸出相對應句式。</tspan>
+  </text>
+
+  <circle cx="1040" cy="512" r="6" fill="#3B82F6" />
+  <text x="1065" y="520" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">3. 物理邊界初步限制：</tspan><tspan fill="#475569">學會在 25 字以內結束句子，不包含 extra text。</tspan>
+  </text>
+
+  <circle cx="1040" cy="592" r="6" fill="#3B82F6" />
+  <text x="1065" y="600" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">4. 台灣在地語境適配：</tspan><tspan fill="#475569">初步能講出「靠北、三小、魯蛇、歸剛欸」等台灣俚語。</tspan>
+  </text>
+<rect x="1040" y="660" width="750" height="220" fill="#FEF3C7" rx="10" /><text x="1070" y="710" fill="#0F172A" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">SFT 侷限與 DPO 引進動機：</text><text x="1070" y="755" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">雖然 SFT 學會了基本格式與俚語，但在對抗性對局中：</text><text x="1070" y="795" fill="#F97316" font-size="16" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- 模型傾向給予安全、冗長且禮貌的回答，缺乏「挑釁力」。</text><text x="1070" y="835" fill="#F97316" font-size="16" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">- 為了讓模型更「毒舌」且精簡，必須進行二階段偏好對齊。</text></svg>

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#EFF6FF" />
+    </linearGradient>
+    <!-- Card drop shadow -->
+    <filter id="shadowFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGrad)" />
+
+  <!-- Decorative curves -->
+  <path d="M 0 0 Q 300 150 960 50 T 1920 0 L 1920 120 L 0 120 Z" fill="#E0F2FE" opacity="0.4" />
+  <circle cx="1800" cy="980" r="300" fill="#DBEAFE" opacity="0.3" />
+  
+  <!-- Slide Header Banner -->
+  <text x="80" y="80" fill="#3B82F6" font-size="22" font-weight="800" letter-spacing="2" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">期末報告 | 基於多 LoRA 協同對抗微調之「多流派毒舌對決」Web 遊戲系統</text>
+  <text x="80" y="160" fill="#0F172A" font-size="52" font-weight="800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">專案核心動機與實現目標</text>
+  
+  <!-- Footer -->
+  <line x1="80" y1="990" x2="1840" y2="990" stroke="#E2E8F0" stroke-width="2" />
+  <text x="80" y="1030" fill="#475569" font-size="16" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">NTNU AGI &amp; Robotics Research | Reinforcement Learning &amp; Cognitive NLP</text>
+  <text x="1800" y="1030" fill="#3B82F6" font-size="18" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Page 2 / 10</text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="80" y="240" width="840" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 80 260 A 20 20 0 0 1 100 240 L 900 240 A 20 20 0 0 1 920 260 L 920 260 L 80 260 Z" fill="#EF4444" />
+    <!-- Title -->
+    <text x="120" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">傳統大型 LLM 落地痛點</text>
+  </g>
+
+  <circle cx="130" cy="382" r="6" fill="#3B82F6" />
+  <text x="155" y="390" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">1. 邊緣延遲 (Latency)：</tspan><tspan fill="#475569">20B+ 模型即時對戰推理超時 (>3秒)</tspan>
+  </text>
+
+  <circle cx="130" cy="492" r="6" fill="#3B82F6" />
+  <text x="155" y="500" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">2. 語意單調 (Monolithic)：</tspan><tspan fill="#475569">通用模型在幽默與在地俚語特徵上張力不足</tspan>
+  </text>
+
+  <circle cx="130" cy="602" r="6" fill="#3B82F6" />
+  <text x="155" y="610" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">3. 格式漂移 (JSON Drift)：</tspan><tspan fill="#475569">神經網絡輸出 JSON 格式不穩，導致系統崩潰</tspan>
+  </text>
+
+  <circle cx="130" cy="712" r="6" fill="#3B82F6" />
+  <text x="155" y="720" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">4. 硬體規格高昂 (Compute)：</tspan><tspan fill="#475569">全參數微調大模型之算力與記憶體成本過高</tspan>
+  </text>
+
+  <!-- Card Container -->
+  <g filter="url(#shadowFilter)">
+    <rect x="990" y="240" width="850" height="680" rx="20" ry="20" fill="#FFFFFF" />
+    <!-- Top accent bar -->
+    <path d="M 990 260 A 20 20 0 0 1 1010 240 L 1820 240 A 20 20 0 0 1 1840 260 L 1840 260 L 990 260 Z" fill="#10B981" />
+    <!-- Title -->
+    <text x="1030" y="305" fill="#0F172A" font-size="26" font-weight="700" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">本專案之技術解決方案</text>
+  </g>
+
+  <circle cx="1040" cy="382" r="6" fill="#3B82F6" />
+  <text x="1065" y="390" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">1. 4B 量化模型基底：</tspan><tspan fill="#475569">採用 Gemma-4-E4B-it，壓低顯存至 10GB</tspan>
+  </text>
+
+  <circle cx="1040" cy="492" r="6" fill="#3B82F6" />
+  <text x="1065" y="500" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">2. 兩階段對齊蒸餾：</tspan><tspan fill="#475569">SFT 穩定 JSON 格式，DPO 蒸餾 Qwen-27B 嗆聲偏好</tspan>
+  </text>
+
+  <circle cx="1040" cy="602" r="6" fill="#3B82F6" />
+  <text x="1065" y="610" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">3. Neuro-Symbolic 限制解碼：</tspan><tspan fill="#475569">以 CFG 採樣約束與括號配對法，達成 100% 解析</tspan>
+  </text>
+
+  <circle cx="1040" cy="712" r="6" fill="#3B82F6" />
+  <text x="1065" y="720" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+    <tspan font-weight="700">4. 雙 LoRA 動態熱插拔：</tspan><tspan fill="#475569">對決端與裁判端動態切換 Peft，精簡顯存佔用</tspan>
+  </text>
+</svg>

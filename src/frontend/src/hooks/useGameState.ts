@@ -1,6 +1,7 @@
 // src/frontend/src/hooks/useGameState.ts
 import { useState, useCallback, useRef } from 'react'
 import type { ChatEntry, HPMap, ServerMessage } from '../types/game'
+import { sound } from '../utils/sound'
 
 export function useGameState(myPlayerId: string) {
   const [hp, setHp] = useState<HPMap>({})
@@ -28,10 +29,14 @@ export function useGameState(myPlayerId: string) {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: msg.message }])
+      if (msg.message.includes('進入競技場！')) {
+        sound.playJoinArena()
+      }
     } else if (msg.type === 'attack') {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
       if (msg.sender === myPlayerId) {
+        sound.playDealDamage()
         // Replace the optimistic pending entry with the confirmed entry + referee
         setChatLog(prev => {
           const withoutPending = prev.filter(
@@ -43,6 +48,7 @@ export function useGameState(myPlayerId: string) {
           ]
         })
       } else {
+        sound.playReceiveDamage()
         setLastDamageEvent({ damage: msg.damage, id: nextId() })
         setChatLog(prev => {
           const withoutPending = prev.filter(
@@ -55,6 +61,7 @@ export function useGameState(myPlayerId: string) {
         })
       }
     } else if (msg.type === 'npc_typing') {
+      sound.playReceiveMessage()
       // NPC words arrived before referee scores — show pending bubble
       setChatLog(prev => [...prev,
         { id: nextId(), kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: 0, isNpc: true, isPending: true },
@@ -63,6 +70,7 @@ export function useGameState(myPlayerId: string) {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
       setLastDamageEvent({ damage: msg.damage, id: nextId() })
+      sound.playReceiveDamage()
       // Replace pending NPC bubble (from npc_typing) with final scored result
       setChatLog(prev => {
         const withoutPending = prev.filter(
@@ -76,12 +84,16 @@ export function useGameState(myPlayerId: string) {
     } else if (msg.type === 'game_over') {
       setGameOver(msg.winner)
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: msg.message }])
+      if (msg.winner === myPlayerId) {
+        sound.playVictory()
+      }
     } else if (msg.type === 'error') {
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: `【系統錯誤】${msg.message}` }])
     } else if (msg.type === 'challenge_declined') {
       setChallengeDeclinedMessage(msg.message)
     } else if (msg.type === 'player_typing') {
       if (msg.sender !== myPlayerId) {
+        sound.playReceiveMessage()
         setChatLog(prev => {
           const exists = prev.some(e => e.kind === 'attack' && e.isPending && e.sender === msg.sender)
           if (exists) return prev

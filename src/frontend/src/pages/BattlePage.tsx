@@ -5,6 +5,7 @@ import { motion, useAnimation } from 'framer-motion'
 import { useGameState } from '../hooks/useGameState'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useAuthContext } from '../contexts/AuthContext'
+import { sound } from '../utils/sound'
 import HPBar from '../components/HPBar'
 import ChatLog from '../components/ChatLog'
 import AttackInput from '../components/AttackInput'
@@ -27,6 +28,7 @@ export default function BattlePage() {
   const handleSend = useCallback((payload: { text: string; image?: string }) => {
     if (payload.text) addOptimisticEntry(payload.text)
     sendAttack(payload)
+    sound.playSendMessage()
   }, [addOptimisticEntry, sendAttack])
   const shakeControls = useAnimation()
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import Button from '../components/Button'
+import { sound } from '../utils/sound'
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -122,6 +123,7 @@ export default function HomePage() {
           setMatchmakingStatus('queued')
         } else if (data.type === 'match_found') {
           setMatchmakingStatus('matched')
+          sound.playMatchFound()
           setTimeout(() => {
             navigate(`/battle/${data.match_id}`, { state: { token, myUsername: username, userId } })
           }, 1200)
@@ -130,6 +132,7 @@ export default function HomePage() {
             matchId: data.match_id,
             challenger: data.challenger
           })
+          sound.playMatchChallenge()
         }
       } catch (err) {
         console.error(err)
@@ -159,6 +162,7 @@ export default function HomePage() {
     setMatchmakingTime(0)
     setMatchError('')
     queueWsRef.current.send(JSON.stringify({ type: 'start_matchmaking' }))
+    sound.playStartQueue()
   }
 
   function cancelMatchmaking() {

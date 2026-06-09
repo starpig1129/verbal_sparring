@@ -23,6 +23,7 @@ export default function HomePage() {
     losses: number
     total_damage: number
     is_online: boolean
+    status: 'idle' | 'searching' | 'battling'
   }
 
   const [players, setPlayers] = useState<MatchmakingPlayer[]>([])
@@ -364,35 +365,58 @@ export default function HomePage() {
           {filteredPlayers.length === 0 ? (
             <div className="text-xs text-[#a88a6d] italic text-center py-8">無其他註冊玩家</div>
           ) : (
-            filteredPlayers.map((p: MatchmakingPlayer) => (
-              <div key={p.id} className="flex justify-between items-center p-2.5 rounded bg-[#16140f]/60 border border-[#3e3420]/50 hover:border-[#4a3f28] hover:bg-[#1f1b14]/70 transition-all duration-200 animate-fade-in">
-                <div className="flex flex-col gap-0.5">
-                  <div className="font-mono text-xs text-white font-bold">{p.username}</div>
-                  <div className="text-[10px] text-[#a88a6d] font-mono">
-                    勝 {p.wins} | 敗 {p.losses} | 傷害 {p.total_damage}
+            filteredPlayers.map((p: MatchmakingPlayer) => {
+              // Determine status indicator color, text, and challengeability
+              let indicatorColor = 'bg-zinc-600'
+              let statusText = '離線'
+              let canChallenge = false
+
+              if (p.is_online) {
+                if (p.status === 'battling') {
+                  indicatorColor = 'bg-red-500 animate-pulse'
+                  statusText = '對戰中'
+                  canChallenge = false
+                } else if (p.status === 'searching') {
+                  indicatorColor = 'bg-amber-500 animate-pulse'
+                  statusText = '列隊中'
+                  canChallenge = true // challenging a searching player triggers auto-accept
+                } else {
+                  indicatorColor = 'bg-green-500'
+                  statusText = '在大廳'
+                  canChallenge = true
+                }
+              }
+
+              return (
+                <div key={p.id} className="flex justify-between items-center p-2.5 rounded bg-[#16140f]/60 border border-[#3e3420]/50 hover:border-[#4a3f28] hover:bg-[#1f1b14]/70 transition-all duration-200 animate-fade-in">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="font-mono text-xs text-white font-bold">{p.username}</div>
+                    <div className="text-[10px] text-[#a88a6d] font-mono">
+                      勝 {p.wins} | 敗 {p.losses} | 傷害 {p.total_damage}
+                    </div>
+                  </div>
+
+                  {/* Online indicator & challenge button */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex flex-col items-end min-w-[45px]">
+                      <span className={`w-2.5 h-2.5 rounded-full ${indicatorColor}`} />
+                      <span className="text-[9px] text-[#a88a6d] mt-0.5">{statusText}</span>
+                    </div>
+                    <button
+                      onClick={() => handleStartMatch(p.username)}
+                      disabled={!canChallenge}
+                      className={`text-[10px] tracking-wider px-3 py-1.5 rounded font-bold transition-all ${
+                        canChallenge
+                          ? 'bg-vermillion hover:bg-red-600 text-white shadow-[0_0_8px_rgba(204,51,0,0.3)] cursor-pointer'
+                          : 'bg-zinc-800 text-zinc-500 border border-zinc-700 opacity-40 cursor-not-allowed'
+                      }`}
+                    >
+                      挑戰
+                    </button>
                   </div>
                 </div>
-                
-                {/* Online indicator & challenge button */}
-                <div className="flex items-center gap-2.5">
-                  <div className="flex flex-col items-end">
-                    <span className={`w-2 h-2 rounded-full ${p.is_online ? 'bg-green-500 animate-pulse' : 'bg-zinc-600'}`} />
-                    <span className="text-[9px] text-[#a88a6d] mt-0.5">{p.is_online ? '在線' : '離線'}</span>
-                  </div>
-                  <button
-                    onClick={() => handleStartMatch(p.username)}
-                    disabled={!p.is_online}
-                    className={`text-[10px] tracking-wider px-3 py-1.5 rounded font-bold transition-all ${
-                      p.is_online
-                        ? 'bg-vermillion hover:bg-red-600 text-white shadow-[0_0_8px_rgba(204,51,0,0.3)] cursor-pointer'
-                        : 'bg-zinc-800 text-zinc-500 border border-zinc-700 opacity-40 cursor-not-allowed'
-                    }`}
-                  >
-                    挑戰
-                  </button>
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 

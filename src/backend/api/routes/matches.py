@@ -54,6 +54,12 @@ async def create_match(
         if not is_online:
             raise HTTPException(status_code=400, detail="對手目前不在線，無法發起挑戰")
 
+        # Reject if the opponent is currently in battle
+        from src.backend.services.game.room import rooms as active_rooms
+        is_battling = any(req.opponent in room.connections for room in active_rooms.values())
+        if is_battling:
+            raise HTTPException(status_code=400, detail="對手正在對戰中，無法發起挑戰")
+
         player2_id = opponent.id
 
     match = Match(
@@ -108,7 +114,19 @@ async def list_other_players(
     current: dict = Depends(get_current_player),
 ) -> list[PlayerMatchmakingResponse]:
     """Get a list of all other players in the system for matchmaking."""
-    from src.backend.api.ws.battle_ws import active_connections_count
+    from src.backend.api.ws.battle_ws import active_connections_count, online_players
+    from src.backend.services.game.room import rooms as active_rooms
+
+    in_queue_usernames = {
+        info["username"]
+        for info in online_players.values()
+        if info.get("is_searching")
+    }
+
+    in_battle_usernames = set()
+    for room in active_rooms.values():
+        for uname in room.connections.keys():
+            in_battle_usernames.add(uname)
 
     current_uuid = uuid.UUID(current["sub"])
     result = await db.execute(
@@ -116,17 +134,29 @@ async def list_other_players(
     )
     players = result.scalars().all()
 
-    return [
-        PlayerMatchmakingResponse(
-            id=str(p.id),
-            username=p.username,
-            wins=p.wins,
-            losses=p.losses,
-            total_damage=p.total_damage,
-            is_online=p.username in active_connections_count and active_connections_count[p.username] > 0,
+    response_list = []
+    for p in players:
+        is_online = p.username in active_connections_count and active_connections_count[p.username] > 0
+
+        status = "idle"
+        if is_online:
+            if p.username in in_battle_usernames:
+                status = "battling"
+            elif p.username in in_queue_usernames:
+                status = "searching"
+
+        response_list.append(
+            PlayerMatchmakingResponse(
+                id=str(p.id),
+                username=p.username,
+                wins=p.wins,
+                losses=p.losses,
+                total_damage=p.total_damage,
+                is_online=is_online,
+                status=status,
+            )
         )
-        for p in players
-    ]
+    return response_list
 
 
 @router.get("/history", response_model=list[MatchHistoryEntry])

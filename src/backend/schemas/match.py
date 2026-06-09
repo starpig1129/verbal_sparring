@@ -58,6 +58,7 @@ class PlayerMatchmakingResponse(BaseModel):
     losses: int
     total_damage: int
     is_online: bool
+    status: str  # "idle" | "searching" | "battling"
 
 
 class MatchHistoryEntry(BaseModel):

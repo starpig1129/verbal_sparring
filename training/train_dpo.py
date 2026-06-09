@@ -152,23 +152,19 @@ def main() -> None:
                 logging_steps=5,
                 save_strategy="no",
                 optim="paged_adamw_8bit",
-                max_length=512,
-                max_prompt_length=256,
                 remove_unused_columns=False
             )
         except TypeError:
-            training_args = DPOConfig(
+            training_args = TrainingArguments(
                 output_dir=args.output_dir,
                 per_device_train_batch_size=args.batch_size,
                 gradient_accumulation_steps=args.gradient_accumulation_steps,
                 learning_rate=args.learning_rate,
-                beta=args.beta,
                 num_train_epochs=args.epochs,
                 bf16=True,
                 logging_steps=5,
                 save_strategy="no",
                 optim="paged_adamw_8bit",
-                max_seq_length=512,
                 remove_unused_columns=False
             )
     else:
@@ -187,16 +183,42 @@ def main() -> None:
 
     # 5. Initialize DPOTrainer
     print("🔥 Launching DPOTrainer...")
-    trainer = DPOTrainer(
-        model=model,
-        ref_model=ref_model,
-        args=training_args,
-        train_dataset=dataset["train"],
-        tokenizer=tokenizer,
-        beta=args.beta,
-        max_length=512,
-        max_prompt_length=256
-    )
+    import inspect
+    
+    dpo_kwargs = {
+        "model": model,
+        "ref_model": ref_model,
+        "args": training_args,
+        "train_dataset": dataset["train"],
+    }
+    
+    # Use inspect.signature to dynamically map parameters based on local TRL version
+    sig = inspect.signature(DPOTrainer.__init__)
+    
+    # 1. Bind tokenizer / processing_class
+    if "processing_class" in sig.parameters:
+        dpo_kwargs["processing_class"] = tokenizer
+        print("  - Binding tokenizer to 'processing_class' argument based on TRL API signature.")
+    else:
+        dpo_kwargs["tokenizer"] = tokenizer
+        print("  - Binding tokenizer to 'tokenizer' argument based on TRL API signature.")
+        
+    # 2. Bind beta parameter (only if expected directly by __init__)
+    if "beta" in sig.parameters:
+        dpo_kwargs["beta"] = args.beta
+        print("  - Binding beta directly to DPOTrainer.")
+    else:
+        print("  - Beta parameter will be read from DPOConfig configuration.")
+        
+    # 3. Bind length constraints (only if expected directly by __init__)
+    if "max_length" in sig.parameters:
+        dpo_kwargs["max_length"] = 512
+        print("  - Setting max_length=512 on DPOTrainer.")
+    if "max_prompt_length" in sig.parameters:
+        dpo_kwargs["max_prompt_length"] = 256
+        print("  - Setting max_prompt_length=256 on DPOTrainer.")
+        
+    trainer = DPOTrainer(**dpo_kwargs)
 
     # 6. Execute DPO training
     print("🏃 Training active adapter via direct preference optimization...")

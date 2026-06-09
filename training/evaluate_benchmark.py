@@ -368,6 +368,15 @@ Below is a random sample comparison of evaluations made by both models:
 
 def main() -> None:
     """Orchestrates the evaluation, chart plotting, and markdown report generation."""
+    import argparse
+    parser = argparse.ArgumentParser(description="Evaluate Base vs LoRA Referee model.")
+    parser.add_argument("--adapter_path", type=str, default="./referee_lora_output/referee_agent/referee_agent", help="LoRA adapter path.")
+    parser.add_argument("--dataset_path", type=str, default="data/referee/referee_train.json", help="Path to evaluation JSON dataset.")
+    parser.add_argument("--chart_output", type=str, default="evaluation/benchmark_comparison.png", help="Path to save the evaluation comparison chart.")
+    parser.add_argument("--report_output", type=str, default="evaluation/benchmark_results.md", help="Path to save the evaluation markdown report.")
+    parser.add_argument("--sample_size", type=int, default=50, help="Number of validation samples to evaluate.")
+    args = parser.parse_args()
+
     setup_environment(42)
 
     # CUDA Diagnostics
@@ -383,14 +392,11 @@ def main() -> None:
         raise RuntimeError("CUDA is not available. Please ensure PyTorch is installed with CUDA support.")
 
     model_id = "google/gemma-4-E4B-it"
-    adapter_path = "./referee_lora_output/referee_agent/referee_agent"
-    dataset_path = "data/referee/referee_train.json"
-    artifacts_dir = "./evaluation"
-    chart_output = os.path.join(artifacts_dir, "benchmark_comparison.png")
-    report_output = os.path.join(artifacts_dir, "benchmark_results.md")
-
-    # Sample size reduced to 50 for faster, responsive evaluation runs
-    sample_size = 50
+    adapter_path = args.adapter_path
+    dataset_path = args.dataset_path
+    chart_output = args.chart_output
+    report_output = args.report_output
+    sample_size = args.sample_size
 
     print("📊 [1/5] Loading validation dataset...")
     try:

@@ -40,17 +40,17 @@
   <text x="155" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     <tspan font-weight="700">1. 兩階段對齊微調之可行性：</tspan><tspan fill="#475569"></tspan>
   </text>
-<text x="150" y="405" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">輕量化 4B VLM/LLM 透過 SFT + DPO，可成功蒸餾出 27B 的</text><text x="150" y="435" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在地幽默與對抗張力，且 VRAM 要求僅 10GB。</text>
+<text x="160" y="405" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">輕量化 4B VLM/LLM 透過 SFT + DPO，可成功蒸餾出 27B 的</text><text x="160" y="435" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在地幽默與對抗張力，且 VRAM 要求僅 10GB。</text>
   <circle cx="130" cy="492" r="6" fill="#3B82F6" />
   <text x="155" y="500" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     <tspan font-weight="700">2. Neuro-Symbolic 限制解碼消弭漂移：</tspan><tspan fill="#475569"></tspan>
   </text>
-<text x="150" y="545" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">結合文法樹限制與括號配對後處置，將原本 0% 的 JSON 解析率</text><text x="150" y="575" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">提升至 **100% 絕對穩定**，是 LLM 接入確定性系統的核心安全網。</text>
+<text x="160" y="545" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">結合文法樹限制與括號配對後處置，將原本 0% 的 JSON 解析率</text><text x="160" y="575" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">提升至 <tspan font-weight="700" fill="#10B981">100% 絕對穩定</tspan>，是 LLM 接入確定性系統的核心安全網。</text>
   <circle cx="130" cy="632" r="6" fill="#3B82F6" />
   <text x="155" y="640" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     <tspan font-weight="700">3. 輕量熱插拔 Multi-LoRA 架構：</tspan><tspan fill="#475569"></tspan>
   </text>
-<text x="150" y="685" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在同個 GPU 計算實例中動態熱插拔多個 LoRA，大幅壓縮多角色</text><text x="150" y="715" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">部署時的硬體基礎設施開銷。</text>
+<text x="160" y="685" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在同個 GPU 計算實例中動態熱插拔多個 LoRA，大幅壓縮多角色</text><text x="160" y="715" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">部署時的硬體基礎設施開銷。</text>
   <!-- Card Container -->
   <g filter="url(#shadowFilter)">
     <rect x="990" y="240" width="850" height="680" rx="20" ry="20" fill="#FFFFFF" />
@@ -64,14 +64,14 @@
   <text x="1065" y="360" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     <tspan font-weight="700">1. 多模態視覺 LoRA 裁判微調：</tspan><tspan fill="#475569"></tspan>
   </text>
-<text x="1060" y="405" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">未來將進一步微調 Gemma-4 的 Vision Tower，讓裁判能識別</text><text x="1060" y="435" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">玩家表情與梗圖 (Meme) 中的視覺諷刺細節，提供更辛辣的打分。</text>
+<text x="1070" y="405" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">未來將進一步微調 Gemma-4 的 Vision Tower，讓裁判能識別</text><text x="1070" y="435" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">玩家表情與梗圖 (Meme) 中的視覺諷刺細節，提供更辛辣的打分。</text>
   <circle cx="1040" cy="492" r="6" fill="#3B82F6" />
   <text x="1065" y="500" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     <tspan font-weight="700">2. 線上即時強化學習自適應對決 (On-the-fly RLAIF)：</tspan><tspan fill="#475569"></tspan>
   </text>
-<text x="1060" y="545" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">直接以玩家對局時的投降率、按讚率或對決時長作為 Reward，</text><text x="1060" y="575" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在線上對決中動態進行 Policy Gradient 更新。</text>
+<text x="1070" y="545" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">直接以玩家對局時的投降率、按讚率或對決時長作為 Reward，</text><text x="1070" y="575" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在線上對決中動態進行 Policy Gradient 更新。</text>
   <circle cx="1040" cy="632" r="6" fill="#3B82F6" />
   <text x="1065" y="640" fill="#0F172A" font-size="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
     <tspan font-weight="700">3. 混合神經符號邏輯推導 (Neuro-Symbolic Reasoning)：</tspan><tspan fill="#475569"></tspan>
   </text>
-<text x="1060" y="685" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">結合知識圖譜 (Knowledge Graph)，讓 NPC 能在對決中引用對手</text><text x="1060" y="715" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在其他對局中的真實背景或歷史言論，增強心理戰層面。</text></svg>
+<text x="1070" y="685" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">結合知識圖譜 (Knowledge Graph)，讓 NPC 能在對決中引用對手</text><text x="1070" y="715" fill="#475569" font-size="18" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">在其他對局中的真實背景或歷史言論，增強心理戰層面。</text></svg>

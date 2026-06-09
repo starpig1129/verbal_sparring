@@ -367,7 +367,7 @@ def render_slide_6() -> str:
     # Left Column: Compact DPO Pairing
     xml += draw_card(80, 240, 780, 680, "DPO 偏好資料生成與對齊機制", THEME["accent_blue"])
     xml += draw_bullet(130, 360, "偏好配對機制 (Chosen vs Rejected)：", "")
-    xml += f'<text x="150" y="410" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>針對同一個挑釁 Prompt，SFT 產生 3 個候選句。由 Qwen 27B 打分：</text>'
+    xml += f'<text x="160" y="410" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>針對同一個挑釁 Prompt，SFT 產生 3 個候選句。由 Qwen 27B 打分：</text>'
     
     xml += f'<rect x="130" y="440" width="700" height="100" fill="#ECFDF5" rx="10" stroke="{THEME["accent_green"]}" stroke-width="1.5" />'
     xml += f'<text x="160" y="480" fill="{THEME["accent_green"]}" font-size="18" font-weight="700" {SVG_FONT_FAMILY}>Chosen (優選反擊，分數最高，字數符合且辣度高)：</text>'
@@ -567,29 +567,29 @@ def render_slide_10() -> str:
     
     xml += draw_card(80, 240, 840, 680, "專案重要結論與工程成果", THEME["accent_green"])
     xml += draw_bullet(130, 360, "1. 兩階段對齊微調之可行性：", "")
-    xml += f'<text x="150" y="405" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>輕量化 4B VLM/LLM 透過 SFT + DPO，可成功蒸餾出 27B 的</text>'
-    xml += f'<text x="150" y="435" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在地幽默與對抗張力，且 VRAM 要求僅 10GB。</text>'
+    xml += f'<text x="160" y="405" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>輕量化 4B VLM/LLM 透過 SFT + DPO，可成功蒸餾出 27B 的</text>'
+    xml += f'<text x="160" y="435" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在地幽默與對抗張力，且 VRAM 要求僅 10GB。</text>'
     
     xml += draw_bullet(130, 500, "2. Neuro-Symbolic 限制解碼消弭漂移：", "")
-    xml += f'<text x="150" y="545" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>結合文法樹限制與括號配對後處置，將原本 0% 的 JSON 解析率</text>'
-    xml += f'<text x="150" y="575" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>提升至 **100% 絕對穩定**，是 LLM 接入確定性系統的核心安全網。</text>'
+    xml += f'<text x="160" y="545" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>結合文法樹限制與括號配對後處置，將原本 0% 的 JSON 解析率</text>'
+    xml += f'<text x="160" y="575" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>提升至 <tspan font-weight="700" fill="{THEME["accent_green"]}">100% 絕對穩定</tspan>，是 LLM 接入確定性系統的核心安全網。</text>'
     
     xml += draw_bullet(130, 640, "3. 輕量熱插拔 Multi-LoRA 架構：", "")
-    xml += f'<text x="150" y="685" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在同個 GPU 計算實例中動態熱插拔多個 LoRA，大幅壓縮多角色</text>'
-    xml += f'<text x="150" y="715" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>部署時的硬體基礎設施開銷。</text>'
+    xml += f'<text x="160" y="685" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在同個 GPU 計算實例中動態熱插拔多個 LoRA，大幅壓縮多角色</text>'
+    xml += f'<text x="160" y="715" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>部署時的硬體基礎設施開銷。</text>'
 
     xml += draw_card(990, 240, 850, 680, "未來研究與開發展望", THEME["accent_blue"])
     xml += draw_bullet(1040, 360, "1. 多模態視覺 LoRA 裁判微調：", "")
-    xml += f'<text x="1060" y="405" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>未來將進一步微調 Gemma-4 的 Vision Tower，讓裁判能識別</text>'
-    xml += f'<text x="1060" y="435" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>玩家表情與梗圖 (Meme) 中的視覺諷刺細節，提供更辛辣的打分。</text>'
+    xml += f'<text x="1070" y="405" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>未來將進一步微調 Gemma-4 的 Vision Tower，讓裁判能識別</text>'
+    xml += f'<text x="1070" y="435" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>玩家表情與梗圖 (Meme) 中的視覺諷刺細節，提供更辛辣的打分。</text>'
 
     xml += draw_bullet(1040, 500, "2. 線上即時強化學習自適應對決 (On-the-fly RLAIF)：", "")
-    xml += f'<text x="1060" y="545" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>直接以玩家對局時的投降率、按讚率或對決時長作為 Reward，</text>'
-    xml += f'<text x="1060" y="575" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在線上對決中動態進行 Policy Gradient 更新。</text>'
+    xml += f'<text x="1070" y="545" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>直接以玩家對局時的投降率、按讚率或對決時長作為 Reward，</text>'
+    xml += f'<text x="1070" y="575" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在線上對決中動態進行 Policy Gradient 更新。</text>'
 
     xml += draw_bullet(1040, 640, "3. 混合神經符號邏輯推導 (Neuro-Symbolic Reasoning)：", "")
-    xml += f'<text x="1060" y="685" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>結合知識圖譜 (Knowledge Graph)，讓 NPC 能在對決中引用對手</text>'
-    xml += f'<text x="1060" y="715" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在其他對局中的真實背景或歷史言論，增強心理戰層面。</text>'
+    xml += f'<text x="1070" y="685" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>結合知識圖譜 (Knowledge Graph)，讓 NPC 能在對決中引用對手</text>'
+    xml += f'<text x="1070" y="715" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>在其他對局中的真實背景或歷史言論，增強心理戰層面。</text>'
 
     xml += "</svg>"
     return xml

@@ -82,7 +82,7 @@ export default function BattlePage() {
       </div>
 
       {/* Chat log */}
-      <ChatLog entries={chatLog} />
+      <ChatLog entries={chatLog} myUsername={myUsername} />
 
       {/* Turn indicator */}
       <TurnIndicator isMyTurn={isMyTurn} />

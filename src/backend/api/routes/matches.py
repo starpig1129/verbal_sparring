@@ -48,8 +48,10 @@ async def create_match(
             raise HTTPException(status_code=400, detail="Cannot create a match against yourself")
 
         # Reject if the opponent is offline
-        from src.backend.api.ws.battle_ws import active_connections_count
-        if req.opponent not in active_connections_count or active_connections_count[req.opponent] <= 0:
+        from src.backend.api.ws.battle_ws import online_players, active_connections_count
+        opponent_id_str = str(opponent.id)
+        is_online = (opponent_id_str in online_players) or (req.opponent in active_connections_count and active_connections_count[req.opponent] > 0)
+        if not is_online:
             raise HTTPException(status_code=400, detail="對手目前不在線，無法發起挑戰")
 
         player2_id = opponent.id
@@ -62,8 +64,39 @@ async def create_match(
     db.add(match)
     await db.commit()
 
+    match_id = str(match.id)
+
+    # Notify the opponent via their lobby WebSocket
+    if not is_npc and player2_id and opponent_id_str in online_players:
+        import json
+        opponent_ws_info = online_players[opponent_id_str]
+        opponent_ws = opponent_ws_info["websocket"]
+        
+        # Check if the opponent is searching in the queue
+        if opponent_ws_info.get("is_searching"):
+            # Auto-accept the match, stop searching, and redirect both to the battle arena
+            opponent_ws_info["is_searching"] = False
+            try:
+                await opponent_ws.send_text(json.dumps({
+                    "type": "match_found",
+                    "match_id": match_id,
+                    "opponent": current["username"]
+                }, ensure_ascii=False))
+            except Exception as e:
+                print(f"[WS ERROR] Failed to send match_found to opponent: {e}", flush=True)
+        else:
+            # Send challenge request to opponent
+            try:
+                await opponent_ws.send_text(json.dumps({
+                    "type": "match_challenge",
+                    "match_id": match_id,
+                    "challenger": current["username"]
+                }, ensure_ascii=False))
+            except Exception as e:
+                print(f"[WS ERROR] Failed to send match_challenge to opponent: {e}", flush=True)
+
     return MatchResponse(
-        match_id=str(match.id),
+        match_id=match_id,
         opponent=req.opponent,
         is_npc=is_npc,
     )

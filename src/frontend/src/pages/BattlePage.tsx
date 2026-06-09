@@ -21,7 +21,7 @@ export default function BattlePage() {
   const token: string = location.state?.token ?? ctxToken
   const myUsername: string = location.state?.myUsername ?? ctxUsername
 
-  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry } = useGameState(myUsername)
+  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry, challengeDeclinedMessage } = useGameState(myUsername)
   const { sendAttack } = useWebSocket(matchId!, myUsername, token, handleMessage)
 
   const handleSend = useCallback((payload: { text: string; image?: string }) => {
@@ -101,6 +101,22 @@ export default function BattlePage() {
           matchId={matchId!}
           onPlayAgain={() => navigate('/')}
         />
+      )}
+
+      {/* Challenge Declined Modal */}
+      {challengeDeclinedMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm p-6 bg-[#0f0e0a] border-2 border-vermillion shadow-[0_0_30px_rgba(204,51,0,0.5)] rounded-2xl text-center flex flex-col items-center gap-4">
+            <h2 className="font-display text-lg text-white font-bold tracking-[2px]">挑戰被拒絕</h2>
+            <p className="text-xs text-[#a88a6d] font-body leading-relaxed">{challengeDeclinedMessage}</p>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-2 bg-vermillion hover:bg-red-600 text-white rounded font-bold transition-all text-xs"
+            >
+              返回大廳
+            </button>
+          </div>
+        </div>
       )}
     </motion.div>
   )

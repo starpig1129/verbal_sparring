@@ -8,6 +8,7 @@ export function useGameState(myPlayerId: string) {
   const [chatLog, setChatLog] = useState<ChatEntry[]>([])
   const [gameOver, setGameOver] = useState<string | null>(null)
   const [lastDamageEvent, setLastDamageEvent] = useState<{ damage: number; id: number } | null>(null)
+  const [challengeDeclinedMessage, setChallengeDeclinedMessage] = useState<string | null>(null)
   const idCounter = useRef(0)
 
   function nextId() {
@@ -73,6 +74,8 @@ export function useGameState(myPlayerId: string) {
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: msg.message }])
     } else if (msg.type === 'error') {
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: `【系統錯誤】${msg.message}` }])
+    } else if (msg.type === 'challenge_declined') {
+      setChallengeDeclinedMessage(msg.message)
     }
   }, [myPlayerId])
 
@@ -80,6 +83,7 @@ export function useGameState(myPlayerId: string) {
     hp, currentTurn,
     isMyTurn: currentTurn === myPlayerId,
     chatLog, gameOver, lastDamageEvent,
+    challengeDeclinedMessage,
     handleMessage, addOptimisticEntry,
   }
 }

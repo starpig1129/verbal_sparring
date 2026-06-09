@@ -25,9 +25,8 @@ router = APIRouter()
 # Active connections per username to track online status
 active_connections_count: dict[str, int] = {}
 
-# Matchmaking queue for quick pairing
-# Each element: {"username": str, "player_id": str, "websocket": WebSocket}
-matchmaking_queue: list[dict] = []
+# Online players in the lobby: player_id (str) -> {"username": str, "websocket": WebSocket, "is_searching": bool}
+online_players: dict[str, dict] = {}
 
 
 async def _persist_round(
@@ -196,10 +195,10 @@ async def battle_ws(
 
         result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
         match = result.scalar_one_or_none()
-        if not match:
-            print(f"[WS WARNING] Match {match_id} not found", flush=True)
+        if not match or match.status == MatchStatus.finished:
+            print(f"[WS WARNING] Match {match_id} not found or already finished", flush=True)
             await websocket.send_text(
-                json.dumps({"type": "error", "message": "Match not found"})
+                json.dumps({"type": "error", "message": "對局不存在或已結束"})
             )
             await websocket.close()
             return
@@ -440,6 +439,7 @@ async def battle_ws(
 async def queue_ws(
     websocket: WebSocket,
     token: str = "",
+    searching: str = "true",
     db: AsyncSession = Depends(get_session),
 ) -> None:
     """WebSocket endpoint for matchmaking queue."""
@@ -459,72 +459,156 @@ async def queue_ws(
     # Update active connections count
     active_connections_count[username] = active_connections_count.get(username, 0) + 1
 
-    player_item = {
-        "player_id": player_uuid,
-        "username": username,
-        "websocket": websocket
-    }
-
     try:
-        # Check if there is an opponent in the queue who is NOT the current player
-        opponent = None
-        for p in matchmaking_queue:
-            if p["player_id"] != player_uuid:
-                opponent = p
-                break
+        is_searching_init = searching.lower() == "true"
 
-        if opponent:
-            matchmaking_queue.remove(opponent)
-            # Match found! Create a match in the database
-            match = Match(
-                player1_id=uuid.UUID(opponent["player_id"]),
-                player2_id=uuid.UUID(player_uuid),
-                status=MatchStatus.pending,
-            )
-            db.add(match)
-            await db.commit()
+        online_players[player_uuid] = {
+            "username": username,
+            "websocket": websocket,
+            "is_searching": is_searching_init
+        }
 
-            match_id = str(match.id)
+        if is_searching_init:
+            # Check if there is an opponent who is searching and not the current player
+            opponent_uuid = None
+            opponent_info = None
+            for op_uuid, op_info in online_players.items():
+                if op_uuid != player_uuid and op_info.get("is_searching"):
+                    opponent_uuid = op_uuid
+                    opponent_info = op_info
+                    break
 
-            # Notify opponent
-            try:
-                await opponent["websocket"].send_text(json.dumps({
+            if opponent_uuid and opponent_info:
+                # Set both to not searching
+                online_players[player_uuid]["is_searching"] = False
+                opponent_info["is_searching"] = False
+
+                # Create a match in the database
+                match = Match(
+                    player1_id=uuid.UUID(opponent_uuid),
+                    player2_id=uuid.UUID(player_uuid),
+                    status=MatchStatus.pending,
+                )
+                db.add(match)
+                await db.commit()
+
+                match_id = str(match.id)
+
+                # Notify opponent
+                try:
+                    await opponent_info["websocket"].send_text(json.dumps({
+                        "type": "match_found",
+                        "match_id": match_id,
+                        "opponent": username
+                    }, ensure_ascii=False))
+                except Exception:
+                    pass
+
+                # Notify current player
+                await websocket.send_text(json.dumps({
                     "type": "match_found",
                     "match_id": match_id,
-                    "opponent": username
+                    "opponent": opponent_info["username"]
                 }, ensure_ascii=False))
+            else:
+                await websocket.send_text(json.dumps({
+                    "type": "queued",
+                    "message": "已加入配對佇列，尋找對手中..."
+                }, ensure_ascii=False))
+
+        # Keep the connection alive and listen for search/cancel/decline actions
+        while True:
+            raw_data = await websocket.receive_text()
+            if raw_data == "ping":
+                await websocket.send_text("pong")
+                continue
+
+            try:
+                data = json.loads(raw_data)
             except Exception:
-                pass
+                continue
 
-            # Notify current player
-            await websocket.send_text(json.dumps({
-                "type": "match_found",
-                "match_id": match_id,
-                "opponent": opponent["username"]
-            }, ensure_ascii=False))
+            msg_type = data.get("type")
+            if msg_type == "start_matchmaking":
+                if player_uuid in online_players:
+                    online_players[player_uuid]["is_searching"] = True
 
-        else:
-            # Add to matchmaking queue
-            matchmaking_queue.append(player_item)
-            await websocket.send_text(json.dumps({
-                "type": "queued",
-                "message": "已加入配對佇列，尋找對手中..."
-            }, ensure_ascii=False))
+                # Check if there is an opponent who is searching and not the current player
+                opponent_uuid = None
+                opponent_info = None
+                for op_uuid, op_info in online_players.items():
+                    if op_uuid != player_uuid and op_info.get("is_searching"):
+                        opponent_uuid = op_uuid
+                        opponent_info = op_info
+                        break
 
-            # Keep the connection alive
-            while True:
-                data = await websocket.receive_text()
-                if data == "ping":
-                    await websocket.send_text("pong")
+                if opponent_uuid and opponent_info:
+                    # Set both to not searching
+                    online_players[player_uuid]["is_searching"] = False
+                    opponent_info["is_searching"] = False
+
+                    # Create a match in the database
+                    match = Match(
+                        player1_id=uuid.UUID(opponent_uuid),
+                        player2_id=uuid.UUID(player_uuid),
+                        status=MatchStatus.pending,
+                    )
+                    db.add(match)
+                    await db.commit()
+
+                    match_id = str(match.id)
+
+                    # Notify opponent
+                    try:
+                        await opponent_info["websocket"].send_text(json.dumps({
+                            "type": "match_found",
+                            "match_id": match_id,
+                            "opponent": username
+                        }, ensure_ascii=False))
+                    except Exception:
+                        pass
+
+                    # Notify current player
+                    await websocket.send_text(json.dumps({
+                        "type": "match_found",
+                        "match_id": match_id,
+                        "opponent": opponent_info["username"]
+                    }, ensure_ascii=False))
+                else:
+                    await websocket.send_text(json.dumps({
+                        "type": "queued",
+                        "message": "已加入配對佇列，尋找對手中..."
+                    }, ensure_ascii=False))
+
+            elif msg_type == "cancel_matchmaking":
+                if player_uuid in online_players:
+                    online_players[player_uuid]["is_searching"] = False
+
+            elif msg_type == "decline_challenge":
+                m_id = data.get("match_id")
+                if m_id:
+                    result = await db.execute(select(Match).where(Match.id == uuid.UUID(m_id)))
+                    m = result.scalar_one_or_none()
+                    if m and m.status == MatchStatus.pending:
+                        m.status = MatchStatus.finished
+                        await db.commit()
+
+                        # Notify the game room if it exists
+                        from src.backend.services.game.room import rooms as game_rooms
+                        if m_id in game_rooms:
+                            await game_rooms[m_id].broadcast({
+                                "type": "challenge_declined",
+                                "message": "對手拒絕了你的挑戰"
+                            })
 
     except WebSocketDisconnect:
         pass
     except Exception as e:
         print(f"[QUEUE ERROR] {e}", flush=True)
     finally:
-        # Clean up queue
-        if player_item in matchmaking_queue:
-            matchmaking_queue.remove(player_item)
+        # Clean up online players
+        if player_uuid in online_players:
+            online_players.pop(player_uuid, None)
 
         # Clean up active connections
         if username in active_connections_count:

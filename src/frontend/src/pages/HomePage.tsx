@@ -31,6 +31,12 @@ export default function HomePage() {
   const [matchmakingStatus, setMatchmakingStatus] = useState<'idle' | 'queued' | 'matched'>('idle')
   const [matchmakingTime, setMatchmakingTime] = useState(0)
 
+  interface IncomingChallenge {
+    matchId: string
+    challenger: string
+  }
+  const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(null)
+
   const queueWsRef = useRef<WebSocket | null>(null)
 
   async function handleAuth() {
@@ -95,18 +101,13 @@ export default function HomePage() {
   }, [matchmakingStatus])
 
   useEffect(() => {
-    return () => {
+    if (!isAuthenticated || !token) {
       if (queueWsRef.current) {
         queueWsRef.current.close()
+        queueWsRef.current = null
       }
+      return
     }
-  }, [])
-
-  function startMatchmaking() {
-    if (queueWsRef.current) return
-    setMatchmakingStatus('queued')
-    setMatchmakingTime(0)
-    setMatchError('')
 
     const WS_BASE = (import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000').replace(/^http/, 'ws')
     const url = `${WS_BASE}/ws/queue?token=${token}`
@@ -116,11 +117,18 @@ export default function HomePage() {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data)
-        if (data.type === 'match_found') {
+        if (data.type === 'queued') {
+          setMatchmakingStatus('queued')
+        } else if (data.type === 'match_found') {
           setMatchmakingStatus('matched')
           setTimeout(() => {
             navigate(`/battle/${data.match_id}`, { state: { token, myUsername: username, userId } })
           }, 1200)
+        } else if (data.type === 'match_challenge') {
+          setIncomingChallenge({
+            matchId: data.match_id,
+            challenger: data.challenger
+          })
         }
       } catch (err) {
         console.error(err)
@@ -129,21 +137,51 @@ export default function HomePage() {
 
     ws.onclose = () => {
       queueWsRef.current = null
-      setMatchmakingStatus((prev: 'idle' | 'queued' | 'matched') => prev === 'matched' ? 'matched' : 'idle')
+      setMatchmakingStatus(prev => prev === 'matched' ? 'matched' : 'idle')
     }
 
     ws.onerror = () => {
       setMatchError('配對發生錯誤，請稍後再試')
-      cancelMatchmaking()
+      setMatchmakingStatus('idle')
     }
+
+    return () => {
+      ws.close()
+    }
+  }, [isAuthenticated, token, username, userId, navigate])
+
+  function startMatchmaking() {
+    if (!queueWsRef.current || queueWsRef.current.readyState !== WebSocket.OPEN) {
+      setMatchError('連接中，請稍候...')
+      return
+    }
+    setMatchmakingTime(0)
+    setMatchError('')
+    queueWsRef.current.send(JSON.stringify({ type: 'start_matchmaking' }))
   }
 
   function cancelMatchmaking() {
-    if (queueWsRef.current) {
-      queueWsRef.current.close()
-      queueWsRef.current = null
-    }
+    if (!queueWsRef.current || queueWsRef.current.readyState !== WebSocket.OPEN) return
+    queueWsRef.current.send(JSON.stringify({ type: 'cancel_matchmaking' }))
     setMatchmakingStatus('idle')
+  }
+
+  function handleAcceptChallenge() {
+    if (incomingChallenge) {
+      const { matchId: mId } = incomingChallenge
+      setIncomingChallenge(null)
+      navigate(`/battle/${mId}`, { state: { token, myUsername: username, userId } })
+    }
+  }
+
+  function handleDeclineChallenge() {
+    if (queueWsRef.current && incomingChallenge) {
+      queueWsRef.current.send(JSON.stringify({
+        type: 'decline_challenge',
+        match_id: incomingChallenge.matchId
+      }))
+    }
+    setIncomingChallenge(null)
   }
 
   function formatTime(seconds: number): string {
@@ -410,6 +448,40 @@ export default function HomePage() {
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Incoming Challenge Modal */}
+      {incomingChallenge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-all duration-300">
+          <div className="w-full max-w-sm p-8 bg-[#0f0e0a] border-2 border-vermillion shadow-[0_0_50px_rgba(204,51,0,0.5)] rounded-2xl text-center flex flex-col items-center gap-6">
+            <div className="w-16 h-16 rounded-full border border-vermillion flex items-center justify-center text-vermillion font-bold font-display text-xl animate-pulse">
+              ⚔️
+            </div>
+            <div className="flex flex-col gap-2">
+              <h2 className="font-display text-xl text-white tracking-[2px] font-bold">收到挑戰！</h2>
+              <p className="text-sm text-[#e2d6be] font-mono font-bold">
+                【{incomingChallenge.challenger.toUpperCase()}】
+              </p>
+              <p className="text-xs text-[#a88a6d] font-body tracking-wider leading-relaxed">
+                向你發起了指定對決！你是否接受挑戰？
+              </p>
+            </div>
+            <div className="flex gap-4 w-full">
+              <button
+                onClick={handleDeclineChallenge}
+                className="flex-1 py-2.5 border border-[#4a3f28] hover:border-zinc-500 hover:text-white bg-[#120f0a] text-zinc-400 text-xs rounded transition-all font-bold"
+              >
+                拒絕
+              </button>
+              <button
+                onClick={handleAcceptChallenge}
+                className="flex-1 py-2.5 bg-vermillion hover:bg-red-600 text-white text-xs rounded transition-all font-bold shadow-[0_0_15px_rgba(204,51,0,0.4)]"
+              >
+                接受挑戰
+              </button>
+            </div>
           </div>
         </div>
       )}

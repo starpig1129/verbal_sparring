@@ -44,11 +44,15 @@ export function useGameState(myPlayerId: string) {
         })
       } else {
         setLastDamageEvent({ damage: msg.damage, id: nextId() })
-        const attackId = nextId()
-        setChatLog(prev => [...prev,
-          { id: attackId, kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
-          { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
-        ])
+        setChatLog(prev => {
+          const withoutPending = prev.filter(
+            e => !(e.kind === 'attack' && e.isPending && e.sender === msg.sender)
+          )
+          return [...withoutPending,
+            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
+            { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
+          ]
+        })
       }
     } else if (msg.type === 'npc_typing') {
       // NPC words arrived before referee scores — show pending bubble
@@ -76,6 +80,17 @@ export function useGameState(myPlayerId: string) {
       setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: `【系統錯誤】${msg.message}` }])
     } else if (msg.type === 'challenge_declined') {
       setChallengeDeclinedMessage(msg.message)
+    } else if (msg.type === 'player_typing') {
+      if (msg.sender !== myPlayerId) {
+        setChatLog(prev => {
+          const exists = prev.some(e => e.kind === 'attack' && e.isPending && e.sender === msg.sender)
+          if (exists) return prev
+          return [...prev, {
+            id: nextId(), kind: 'attack', sender: msg.sender,
+            displayText: msg.text, damage: 0, isNpc: false, isPending: true,
+          }]
+        })
+      }
     }
   }, [myPlayerId])
 

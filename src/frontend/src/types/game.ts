@@ -12,6 +12,7 @@ export type ServerMessage =
   | { type: 'turn_error'; message: string }
   | { type: 'error'; message: string }
   | { type: 'challenge_declined'; message: string }
+  | { type: 'player_typing'; sender: string; text: string }
 
 export type ChatEntry =
   | { id: number; kind: 'system'; displayText: string }

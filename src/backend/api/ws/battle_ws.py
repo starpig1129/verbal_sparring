@@ -271,6 +271,13 @@ async def battle_ws(
                 if not text and not image_b64:
                     continue
 
+                # Broadcast player typing/attack immediately so the opponent sees it in real-time
+                await room.broadcast({
+                    "type": "player_typing",
+                    "sender": player_id,
+                    "text": text
+                })
+
                 try:
                     print(
                         f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...",

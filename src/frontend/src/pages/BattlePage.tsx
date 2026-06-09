@@ -69,7 +69,7 @@ export default function BattlePage() {
       {/* HP section */}
       <div className="flex items-stretch border-b border-[#1a1610] flex-shrink-0">
         <div className="flex-1 px-4 py-3 border-r border-[#1a1610]">
-          <HPBar label={myUsername} hp={myHp} />
+          <HPBar label={String(opponentName)} hp={Number(opponentHp)} />
         </div>
         <div className="px-3 flex flex-col items-center justify-center bg-[#080805]">
           <span className="font-body italic text-[#1a1610] text-sm">對</span>
@@ -77,7 +77,7 @@ export default function BattlePage() {
           <div className="w-[5px] h-[5px] bg-vermillion rounded-full opacity-60" />
         </div>
         <div className="flex-1 px-4 py-3 border-l border-[#1a1610] text-right">
-          <HPBar label={String(opponentName)} hp={Number(opponentHp)} />
+          <HPBar label={myUsername} hp={myHp} />
         </div>
       </div>
 

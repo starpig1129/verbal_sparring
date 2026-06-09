@@ -13,6 +13,7 @@ export type ServerMessage =
   | { type: 'error'; message: string }
   | { type: 'challenge_declined'; message: string }
   | { type: 'player_typing'; sender: string; text: string }
+  | { type: 'history'; rounds: RoundSnapshot[] }
 
 export type ChatEntry =
   | { id: number; kind: 'system'; displayText: string }

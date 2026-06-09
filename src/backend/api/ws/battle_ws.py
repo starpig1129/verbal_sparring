@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -204,10 +205,60 @@ async def battle_ws(
             return
 
         is_npc = match.player2_id is None
+
+        # Get Player 1 and Player 2 usernames to map DB IDs to usernames
+        p1_name = "Unknown"
+        p2_name = "NPC"
+        if match.player1_id:
+            p1_res = await db.execute(select(Player).where(Player.id == match.player1_id))
+            p1 = p1_res.scalar_one_or_none()
+            if p1:
+                p1_name = p1.username
+        if match.player2_id:
+            p2_res = await db.execute(select(Player).where(Player.id == match.player2_id))
+            p2 = p2_res.scalar_one_or_none()
+            if p2:
+                p2_name = p2.username
+
+        # Query all past rounds from DB
+        rounds_result = await db.execute(
+            select(GameRound)
+            .where(GameRound.match_id == uuid.UUID(match_id))
+            .order_by(GameRound.round_number.asc())
+        )
+        rounds = rounds_result.scalars().all()
+
         if match_id not in rooms:
             rooms[match_id] = GameRoom(match_id=match_id, is_npc=is_npc)
+            room = rooms[match_id]
+            # Restore room HP, round_number, and current_turn from latest DB round snapshot
+            if rounds:
+                latest_round = rounds[-1]
+                room.hp = dict(latest_round.hp_snapshot)
+                room.round_number = latest_round.round_number
 
-        room = rooms[match_id]
+                # Determine whose turn is next based on the last attacker
+                if is_npc:
+                    room.current_turn = p1_name
+                else:
+                    if latest_round.attacker_id == match.player1_id:
+                        room.current_turn = p2_name
+                    elif latest_round.attacker_id == match.player2_id:
+                        room.current_turn = p1_name
+                    else:
+                        room.current_turn = p1_name
+            else:
+                if is_npc:
+                    room.hp["NPC"] = 100
+                    room.hp[p1_name] = 100
+                else:
+                    room.hp[p1_name] = 100
+                    room.hp[p2_name] = 100
+                room.current_turn = p1_name
+                room.round_number = 0
+        else:
+            room = rooms[match_id]
+
         room.connect(player_id, websocket)
 
         if is_npc and "NPC" not in room.hp:
@@ -221,6 +272,25 @@ async def battle_ws(
             match.started_at = datetime.now(timezone.utc)
             await db.commit()
 
+        # Send the "history" message to the client before broadcasting system join
+        history_rounds = []
+        for r in rounds:
+            r_sender = p1_name if r.attacker_id == match.player1_id else (p2_name if r.attacker_id == match.player2_id else "NPC")
+            history_rounds.append({
+                "round_number": r.round_number,
+                "attacker": r_sender,
+                "original_text": r.original_text,
+                "display_text": r.display_text,
+                "damage": r.damage,
+                "referee_comment": r.referee_comment,
+                "hp_snapshot": r.hp_snapshot
+            })
+
+        await websocket.send_text(json.dumps({
+            "type": "history",
+            "rounds": history_rounds
+        }, ensure_ascii=False))
+
         await room.broadcast(
             {
                 "type": "system",
@@ -232,6 +302,29 @@ async def battle_ws(
 
         # JWT sub is the canonical UUID for DB operations
         attacker_player_id = payload["sub"]
+
+        # Eagerly initialize the battle session using history
+        session = get_battle_session(match_id)
+        if not session:
+            initial_messages = []
+            for r in rounds:
+                r_sender = p1_name if r.attacker_id == match.player1_id else (p2_name if r.attacker_id == match.player2_id else "NPC")
+                if is_npc:
+                    if r_sender == "NPC":
+                        initial_messages.append(AIMessage(content=r.original_text or ""))
+                    else:
+                        initial_messages.append(HumanMessage(content=r.original_text or ""))
+                else:
+                    initial_messages.append(HumanMessage(content=f"[{r_sender}] {r.original_text or ''}"))
+
+            session = create_battle_session(
+                match_id=match_id,
+                player_id=player_id,
+                player_uuid=attacker_player_id,
+                is_npc=is_npc,
+                initial_hp=dict(room.hp),
+                initial_messages=initial_messages,
+            )
 
         try:
             while True:
@@ -286,12 +379,23 @@ async def battle_ws(
 
                     session = get_battle_session(match_id)
                     if not session:
+                        initial_messages = []
+                        for r in rounds:
+                            r_sender = p1_name if r.attacker_id == match.player1_id else (p2_name if r.attacker_id == match.player2_id else "NPC")
+                            if is_npc:
+                                if r_sender == "NPC":
+                                    initial_messages.append(AIMessage(content=r.original_text or ""))
+                                else:
+                                    initial_messages.append(HumanMessage(content=r.original_text or ""))
+                            else:
+                                initial_messages.append(HumanMessage(content=f"[{r_sender}] {r.original_text or ''}"))
                         session = create_battle_session(
                             match_id=match_id,
                             player_id=player_id,
                             player_uuid=attacker_player_id,
                             is_npc=is_npc,
                             initial_hp=dict(room.hp),
+                            initial_messages=initial_messages,
                         )
 
                     # Stream results node-by-node so we can broadcast each step immediately.

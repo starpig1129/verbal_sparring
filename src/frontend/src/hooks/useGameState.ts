@@ -91,6 +91,20 @@ export function useGameState(myPlayerId: string) {
           }]
         })
       }
+    } else if (msg.type === 'history') {
+      const restoredChatLog: ChatEntry[] = []
+      msg.rounds.forEach(r => {
+        const isNpc = r.attacker === 'NPC'
+        restoredChatLog.push(
+          { id: nextId(), kind: 'attack', sender: r.attacker || 'NPC', displayText: r.original_text || '', damage: r.damage, isNpc },
+          { id: nextId(), kind: 'referee', displayText: `${r.display_text}　—　${r.referee_comment}` }
+        )
+      })
+      setChatLog(restoredChatLog)
+      if (msg.rounds.length > 0) {
+        const latestRound = msg.rounds[msg.rounds.length - 1]
+        setHp(latestRound.hp_snapshot)
+      }
     }
   }, [myPlayerId])
 

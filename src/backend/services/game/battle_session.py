@@ -413,15 +413,16 @@ class BattleSession:
         player_uuid: str,
         is_npc: bool,
         initial_hp: dict[str, int],
+        initial_messages: list = None,
     ) -> None:
         self._checkpointer = MemorySaver()
         self._graph = _compile_graph(self._checkpointer)
         self._match_id = match_id
         self._thread_id = match_id
         self._initialized = False
-        self._last_messages: list[BaseMessage] = []
+        self._last_messages: list[BaseMessage] = list(initial_messages) if initial_messages else []
         self._initial_state: BattleState = {
-            "messages": [],
+            "messages": initial_messages or [],
             "hp": dict(initial_hp),
             "current_turn": player_id,
             "round_number": 0,
@@ -538,8 +539,9 @@ def create_battle_session(
     player_uuid: str,
     is_npc: bool,
     initial_hp: dict[str, int],
+    initial_messages: list = None,
 ) -> BattleSession:
-    session = BattleSession(match_id, player_id, player_uuid, is_npc, initial_hp)
+    session = BattleSession(match_id, player_id, player_uuid, is_npc, initial_hp, initial_messages)
     _sessions[match_id] = session
     return session
 

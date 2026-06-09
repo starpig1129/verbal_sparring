@@ -110,7 +110,7 @@ export default function HomePage() {
     }
 
     const WS_BASE = (import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000').replace(/^http/, 'ws')
-    const url = `${WS_BASE}/ws/queue?token=${token}`
+    const url = `${WS_BASE}/ws/queue?token=${token}&searching=false`
     const ws = new WebSocket(url)
     queueWsRef.current = ws
 

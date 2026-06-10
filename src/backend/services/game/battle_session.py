@@ -29,8 +29,8 @@ from src.backend.core.config import (
     make_chat_llm,
     settings,
 )
-from src.backend.services.npc.agent import _get_memory
-from src.backend.services.referee.graph import _extract_json
+from src.backend.services.npc.agent import _get_memory, fallback_taunt
+from src.backend.services.referee.graph import _extract_json, fallback_referee_result
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +156,12 @@ async def _score(
         attack_text, attacker_display, hp_attacker, hp_defender,
         round_number, recent_messages, image_b64,
     )
-    response = await _referee_llm.ainvoke(msgs)
+    try:
+        response = await _referee_llm.ainvoke(msgs)
+    except Exception as e:
+        # A transient LLM outage must degrade the verdict, not abort the round.
+        logger.error(f"[REFEREE ERROR] LLM call failed: {e}. Using fallback.")
+        return fallback_referee_result(attack_text)
     parsed = _extract_json(response.content)
     if parsed is None:
         return {"damage": 15, "comment": "裁判嘴瓢了", "display_text": attack_text or "（無言以對）"}
@@ -209,8 +214,16 @@ async def _generate_npc_attack(state: BattleState) -> str:
     npc_msgs: list = [SystemMessage(content=system_content)]
     npc_msgs.extend(history)
 
-    response = await _npc_llm.ainvoke(npc_msgs)
-    return response.content.strip()
+    try:
+        response = await _npc_llm.ainvoke(npc_msgs)
+        npc_text = response.content.strip()
+        if not npc_text:
+            raise ValueError("Empty response from NPC LLM")
+        return npc_text
+    except Exception as e:
+        # A transient LLM outage must degrade the taunt, not abort the turn.
+        logger.error(f"[NPC ERROR] LLM call failed: {e}. Using fallback taunt.")
+        return fallback_taunt()
 
 
 # ── Graph nodes ───────────────────────────────────────────────────────────────

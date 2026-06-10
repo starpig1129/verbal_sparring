@@ -19,6 +19,38 @@ logger = logging.getLogger(__name__)
 # Module-level LLM instance shared across all referee invocations.
 _llm = make_chat_llm("referee", settings.referee_temperature)
 
+# Canned verdicts used when the referee LLM is unreachable, so a transient
+# model outage degrades the round instead of aborting it.
+FALLBACK_COMMENTS = [
+    "力道不夠，回去多練練！",
+    "這嘲諷，傷害比蚊子咬還低。",
+    "裁判覺得你的詞彙量有待加強。",
+    "嘴皮子挺溜，但沒什麼威力。",
+    "這攻擊，簡直是在給對手刮痧！",
+    "AI 裁判被你的尷尬言論震驚了。",
+    "你是在說相聲還是在戰鬥？",
+    "聽了想睡覺，換個新鮮的吧。",
+]
+FALLBACK_REWRITES = [
+    "就這？連隔邊阿嬤出拳都比你重！",
+    "你那點微末本領，拿來雜耍都嫌寒酸！",
+    "看你說話的蠢樣，真替你的智商感到遺憾！",
+    "別再浪費空氣了，你的存在就是個笑話！",
+    "這就是你的全力？回家洗洗睡吧！",
+    "聽你說話就像在聽噪音，能閉嘴嗎？",
+    "說最狠的話，挨最毒的打，說的就是你吧！",
+]
+
+
+def fallback_referee_result(text: str) -> dict:
+    """Deterministic referee verdict derived from the attack text."""
+    h = abs(hash(text or ""))
+    return {
+        "damage": 10 + (h % 21),
+        "comment": FALLBACK_COMMENTS[h % len(FALLBACK_COMMENTS)],
+        "display_text": FALLBACK_REWRITES[(h + 1) % len(FALLBACK_REWRITES)],
+    }
+
 
 class RefereeState(TypedDict):
     """Typed state passed between LangGraph nodes.
@@ -212,29 +244,4 @@ async def run_referee(text: str, image_b64: str | None, context: dict | None = N
         }
     except Exception as e:
         logger.error(f"[REFEREE ERROR] LLM call failed: {e}. Using fallback.")
-        import random
-        comments = [
-            "力道不夠，回去多練練！",
-            "這嘲諷，傷害比蚊子咬還低。",
-            "裁判覺得你的詞彙量有待加強。",
-            "嘴皮子挺溜，但沒什麼威力。",
-            "這攻擊，簡直是在給對手刮痧！",
-            "AI 裁判被你的尷尬言論震驚了。",
-            "你是在說相聲還是在戰鬥？",
-            "聽了想睡覺，換個新鮮的吧。",
-        ]
-        rewrites = [
-            "就這？連隔邊阿嬤出拳都比你重！",
-            "你那點微末本領，拿來雜耍都嫌寒酸！",
-            "看你說話的蠢樣，真替你的智商感到遺憾！",
-            "別再浪費空氣了，你的存在就是個笑話！",
-            "這就是你的全力？回家洗洗睡吧！",
-            "聽你說話就像在聽噪音，能閉嘴嗎？",
-            "說最狠的話，挨最毒的打，說的就是你吧！",
-        ]
-        h = abs(hash(text or ""))
-        return {
-            "damage": 10 + (h % 21),
-            "comment": comments[h % len(comments)],
-            "display_text": rewrites[(h + 1) % len(rewrites)],
-        }
+        return fallback_referee_result(text)

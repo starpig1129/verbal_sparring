@@ -17,6 +17,25 @@ logger = logging.getLogger(__name__)
 # Module-level LLM instance shared across all NPC invocations.
 _llm = make_chat_llm("player", settings.player_temperature)
 
+# Canned taunts used when the NPC LLM is unreachable, so a transient model
+# outage degrades the turn instead of aborting it.
+FALLBACK_TAUNTS = [
+    "就這點實力？我代碼寫得都比你好！",
+    "你的攻擊軟綿綿的，是在幫我按摩嗎？",
+    "放棄吧，人類的智慧在 AI 面前不堪一擊！",
+    "你的發言已經被我歸類為垃圾郵件了。",
+    "重開機吧，你這局已經沒救了。",
+    "我一秒鐘能運算百萬次，你一秒鐘只能發呆一次！",
+    "你連當我的訓練集都不配！",
+    "你的嘲諷還不如 404 Page Not Found 有創意。",
+]
+
+
+def fallback_taunt() -> str:
+    """Random canned NPC taunt for when the LLM call fails."""
+    import random
+    return random.choice(FALLBACK_TAUNTS)
+
 
 class NPCState(TypedDict):
     """Typed state passed through the NPC LangGraph.
@@ -183,15 +202,4 @@ async def run_npc_turn(
         return result["attack_text"]
     except Exception as e:
         logger.error(f"[NPC ERROR] LLM call failed: {e}. Using fallback taunt.")
-        import random
-        fallbacks = [
-            "就這點實力？我代碼寫得都比你好！",
-            "你的攻擊軟綿綿的，是在幫我按摩嗎？",
-            "放棄吧，人類的智慧在 AI 面前不堪一擊！",
-            "你的發言已經被我歸類為垃圾郵件了。",
-            "重開機吧，你這局已經沒救了。",
-            "我一秒鐘能運算百萬次，你一秒鐘只能發呆一次！",
-            "你連當我的訓練集都不配！",
-            "你的嘲諷還不如 404 Page Not Found 有創意。",
-        ]
-        return random.choice(fallbacks)
+        return fallback_taunt()

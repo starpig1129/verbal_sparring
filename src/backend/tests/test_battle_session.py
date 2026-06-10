@@ -83,3 +83,32 @@ async def test_npc_turn_discarded_when_player_attack_ends_match(db):
     assert outputs["score_player_attack"]["winner"] == "p1"
     # npc_score must not apply damage after the match has ended
     assert not outputs.get("npc_score")
+
+
+async def test_round_survives_llm_outage(db):
+    """When the LLM backend is unreachable, the round completes on fallbacks."""
+
+    async def _raise(_msgs):
+        raise ConnectionError("vllm down")
+
+    dead_llm = AsyncMock()
+    dead_llm.ainvoke.side_effect = _raise
+
+    with patch("src.backend.services.game.battle_session._referee_llm", dead_llm), \
+         patch("src.backend.services.game.battle_session._npc_llm", dead_llm):
+        session = BattleSession(
+            match_id="m-outage",
+            player_id="p1",
+            player_uuid=str(uuid.uuid4()),
+            is_npc=True,
+            initial_hp={"p1": 100, "NPC": 100},
+        )
+        outputs = {
+            name: out
+            async for name, out in session.process_attack_streaming("嗆聲", "p1", db)
+        }
+
+    assert 10 <= outputs["score_player_attack"]["damage"] <= 30
+    assert outputs["npc_generate"]["npc_text"]  # fallback taunt, not empty
+    assert 10 <= outputs["npc_score"]["npc_damage"] <= 30
+    assert outputs["npc_score"]["game_over"] is False

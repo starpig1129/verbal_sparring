@@ -56,6 +56,7 @@ services:
       --lora-modules referee-agent=/lora/referee_agent player-agent=/lora/player_agent_dpo
       --gpu-memory-utilization 0.90
       --max-model-len 4096
+      --enable-prefix-caching
       --enforce-eager
 
   backend:

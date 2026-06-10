@@ -14,6 +14,8 @@ import DamageNumber from '../components/DamageNumber'
 import GameOverModal from '../components/GameOverModal'
 import type { MatchRecord } from '../types/game'
 
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
 export default function BattlePage() {
   const { matchId } = useParams<{ matchId: string }>()
   const location = useLocation()
@@ -22,8 +24,13 @@ export default function BattlePage() {
   const token: string = location.state?.token ?? ctxToken
   const myUsername: string = location.state?.myUsername ?? ctxUsername
 
-  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry, challengeDeclinedMessage } = useGameState(myUsername)
-  const { sendAttack } = useWebSocket(matchId!, myUsername, token, handleMessage)
+  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry, challengeDeclinedMessage, reset } = useGameState(myUsername)
+  const { sendAttack, connectionState } = useWebSocket(matchId!, myUsername, token, handleMessage)
+
+  // Rematches navigate to a fresh match URL — wipe the previous battle state.
+  useEffect(() => {
+    reset()
+  }, [matchId, reset])
 
   const handleSend = useCallback((payload: { text: string; image?: string }) => {
     if (payload.text) addOptimisticEntry(payload.text)
@@ -36,6 +43,27 @@ export default function BattlePage() {
   const opponentEntries = Object.entries(hp).filter(([k]) => k !== myUsername)
   const [opponentName, opponentHp] = opponentEntries[0] ?? ['對手', 100]
   const roundCount = chatLog.filter(e => e.kind === 'attack').length
+
+  // NPC rematch: the finished match stays finished — create a fresh one and
+  // jump to it. PvP rematches go through the lobby challenge flow.
+  const handlePlayAgain = useCallback(async () => {
+    if (String(opponentName) !== 'NPC') {
+      navigate('/')
+      return
+    }
+    try {
+      const resp = await fetch(`${API}/api/matches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ opponent: 'npc' }),
+      })
+      if (!resp.ok) throw new Error('create match failed')
+      const data = await resp.json()
+      navigate(`/battle/${data.match_id}`, { state: { token, myUsername } })
+    } catch {
+      navigate('/')
+    }
+  }, [opponentName, token, myUsername, navigate])
 
   // Screen shake on big damage
   useEffect(() => {
@@ -83,6 +111,18 @@ export default function BattlePage() {
         </div>
       </div>
 
+      {/* Connection status banner */}
+      {connectionState === 'reconnecting' && (
+        <div className="bg-vermillion/90 text-white text-xs font-mono text-center py-1.5 tracking-[2px] flex-shrink-0 animate-pulse">
+          連線中斷，重新連線中…
+        </div>
+      )}
+      {connectionState === 'closed' && (
+        <div className="bg-[#4a3f28] text-[#e2d6be] text-xs font-mono text-center py-1.5 tracking-[2px] flex-shrink-0">
+          連線已失效，請重新登入
+        </div>
+      )}
+
       {/* Chat log */}
       <ChatLog entries={chatLog} myUsername={myUsername} />
 
@@ -101,7 +141,7 @@ export default function BattlePage() {
           winner={gameOver}
           myUsername={myUsername}
           matchId={matchId!}
-          onPlayAgain={() => navigate('/')}
+          onPlayAgain={handlePlayAgain}
         />
       )}
 

@@ -9,13 +9,14 @@ BattleState alive across multiple process_attack() calls, so:
 Call destroy_session(match_id) when the match ends to free the checkpointer.
 """
 
+import asyncio
 import json
 from typing import Annotated, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, StateGraph
+from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,6 +52,9 @@ class BattleState(TypedDict):
     is_npc_match: bool
     player_id: str          # URL-param room key for the human player (used in hp dict)
     player_uuid: str        # JWT sub UUID — used for DB / NpcMemory lookups
+    npc_memory: dict        # NpcMemory snapshot, fetched before each turn so
+                            # npc_generate never touches the DB while running
+                            # in parallel with the WS loop's persistence.
 
     # Per-invocation inputs (overwritten each call)
     attack_text: str
@@ -162,7 +166,7 @@ async def _score(
 
 # ── NPC helper ────────────────────────────────────────────────────────────────
 
-async def _generate_npc_attack(state: BattleState, db: AsyncSession) -> str:
+async def _generate_npc_attack(state: BattleState) -> str:
     """Generate NPC attack using the full battle conversation as proper turns.
 
     The NPC LLM sees:
@@ -173,11 +177,10 @@ async def _generate_npc_attack(state: BattleState, db: AsyncSession) -> str:
       HumanMessage  — player's latest attack  ← generates response here
     """
     player_id = state["player_id"]
-    player_uuid = state.get("player_uuid") or player_id
     npc_hp = state["hp"].get("NPC", 100)
     player_hp = state["hp"].get(player_id, 100)
 
-    memory = await _get_memory(db, player_uuid)
+    memory = state.get("npc_memory") or {}
     memory_hint = ""
     if memory.get("round_count", 0) > 0:
         patterns = ", ".join(memory.get("attack_patterns", [])[:3])
@@ -193,8 +196,15 @@ async def _generate_npc_attack(state: BattleState, db: AsyncSession) -> str:
         f"{memory_hint}"
     )
 
+    # Cap the history sent to the LLM: the opening turns anchor the battle's
+    # tone, the recent turns carry the thread. Unbounded growth slows every
+    # round and risks pushing the system prompt out of the context window.
+    history = list(state["messages"])
+    if len(history) > 14:
+        history = history[:2] + history[-12:]
+
     npc_msgs: list = [SystemMessage(content=system_content)]
-    npc_msgs.extend(state["messages"])  # full battle history as proper turns
+    npc_msgs.extend(history)
 
     response = await _npc_llm.ainvoke(npc_msgs)
     return response.content.strip()
@@ -226,6 +236,9 @@ async def _node_score_player_attack(
     new_hp[target_key] = max(0, new_hp.get(target_key, 100) - scored["damage"])
     game_over = new_hp[target_key] <= 0
 
+    # NPC fields are NOT reset here: npc_generate may run in the same
+    # parallel superstep and write npc_text — two writers to one plain key
+    # would raise InvalidUpdateError. Resets happen in _build_turn_input.
     return {
         "hp": new_hp,
         "round_number": round_num,
@@ -235,11 +248,6 @@ async def _node_score_player_attack(
         "game_over": game_over,
         "winner": attacker_id if game_over else None,
         "current_turn": target_key if not game_over else state["current_turn"],
-        # Reset NPC fields
-        "npc_text": "",
-        "npc_damage": 0,
-        "npc_ref_comment": "",
-        "npc_ref_display_text": "",
     }
 
 
@@ -248,10 +256,10 @@ async def _node_npc_generate(
 ) -> dict:
     """Generate NPC counter-attack text and add it to conversation history.
 
-    Yields early so the caller can broadcast the NPC's words before scoring.
+    Runs in parallel with score_player_attack, so it must not touch the DB —
+    opponent memory is pre-fetched into state.npc_memory.
     """
-    db: AsyncSession = config["configurable"]["db"]
-    npc_text = await _generate_npc_attack(state, db)
+    npc_text = await _generate_npc_attack(state)
     return {
         "messages": [AIMessage(content=npc_text)],  # add_messages appends
         "npc_text": npc_text,
@@ -260,8 +268,14 @@ async def _node_npc_generate(
 
 async def _node_npc_score(
     state: BattleState, config: RunnableConfig
-) -> dict:
+) -> dict | None:
     """Score the NPC's attack (already in state.npc_text), apply damage."""
+    if state["game_over"]:
+        # The player's attack already ended the match while npc_generate was
+        # running in parallel — discard the NPC turn entirely (None = no state
+        # write; an empty dict would raise InvalidUpdateError).
+        return None
+
     player_id = state["player_id"]
     npc_text = state["npc_text"]
     npc_hp = state["hp"].get("NPC", 100)
@@ -289,10 +303,16 @@ async def _node_npc_score(
     }
 
 
-def _route_after_player_attack(state: BattleState) -> str:
-    if state["game_over"] or not state["is_npc_match"]:
-        return END
-    return "npc_generate"
+def _route_entry(state: BattleState) -> list[str]:
+    """Fan out at the start of each turn.
+
+    NPC matches run referee scoring and NPC generation in parallel — the NPC
+    only needs the player's words (already in messages), not the referee's
+    verdict, so the two LLM calls need not be sequential.
+    """
+    if state["is_npc_match"]:
+        return ["score_player_attack", "npc_generate"]
+    return ["score_player_attack"]
 
 
 # ── Graph ─────────────────────────────────────────────────────────────────────
@@ -302,21 +322,42 @@ def _compile_graph(checkpointer: MemorySaver):
     g.add_node("score_player_attack", _node_score_player_attack)
     g.add_node("npc_generate", _node_npc_generate)
     g.add_node("npc_score", _node_npc_score)
-    g.set_entry_point("score_player_attack")
     g.add_conditional_edges(
-        "score_player_attack",
-        _route_after_player_attack,
-        {"npc_generate": "npc_generate", END: END},
+        START, _route_entry, ["score_player_attack", "npc_generate"]
     )
-    g.add_edge("npc_generate", "npc_score")
+    # Join: npc_score waits for both parallel branches. In PvP matches
+    # npc_generate never runs, so the join never fires and the graph ends
+    # after score_player_attack.
+    g.add_edge(["score_player_attack", "npc_generate"], "npc_score")
     g.add_edge("npc_score", END)
     return g.compile(checkpointer=checkpointer)
 
 
 # ── Post-match memory analysis ────────────────────────────────────────────────
 
+# Keep strong references to fire-and-forget tasks so they are not GC'd mid-run.
+_background_tasks: set[asyncio.Task] = set()
+
+
+def spawn_background_task(coro) -> asyncio.Task:
+    """Run a coroutine as a tracked fire-and-forget task.
+
+    Holds a strong reference until completion and logs any exception instead
+    of letting it vanish silently.
+    """
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+
+    def _on_done(t: asyncio.Task) -> None:
+        _background_tasks.discard(t)
+        if not t.cancelled() and t.exception():
+            print(f"[BG TASK ERROR] {t.exception()!r}", flush=True)
+
+    task.add_done_callback(_on_done)
+    return task
+
+
 async def analyze_and_update_player_memory(
-    db: AsyncSession,
     player_id: str,
     messages: list[BaseMessage],
     total_damage_dealt_to_npc: int,
@@ -324,11 +365,12 @@ async def analyze_and_update_player_memory(
 ) -> None:
     """Analyse the completed battle and update NpcMemory with comprehensive intel.
 
-    Called asynchronously after match_over; extracts attack_patterns and
+    Called as a background task after match_over; extracts attack_patterns and
     weaknesses from the full dialogue via LLM, then persists to NpcMemory.
+    Opens its own DB session — the caller's WS-scoped session may already be
+    closed by the time this runs.
 
     Args:
-        db: Async SQLAlchemy session.
         player_id: UUID string of the human player.
         messages: Full battle messages list from BattleState.
         total_damage_dealt_to_npc: Total damage the player dealt to the NPC.
@@ -368,29 +410,31 @@ async def analyze_and_update_player_memory(
         new_weaknesses = [str(w)[:20] for w in parsed.get("weaknesses", [])[:4]]
 
         from sqlalchemy import select
+        from src.backend.core.database import SessionFactory
         from src.backend.models import NpcMemory
         import uuid as _uuid
 
-        result = await db.execute(
-            select(NpcMemory).where(NpcMemory.opponent_id == _uuid.UUID(player_id))
-        )
-        mem = result.scalar_one_or_none()
-        if not mem:
-            mem = NpcMemory(opponent_id=_uuid.UUID(player_id))
-            db.add(mem)
+        async with SessionFactory() as db:
+            result = await db.execute(
+                select(NpcMemory).where(NpcMemory.opponent_id == _uuid.UUID(player_id))
+            )
+            mem = result.scalar_one_or_none()
+            if not mem:
+                mem = NpcMemory(opponent_id=_uuid.UUID(player_id))
+                db.add(mem)
 
-        # Merge new patterns/weaknesses (keep at most 10 unique entries each)
-        existing_patterns = set(mem.attack_patterns)
-        existing_weaknesses = set(mem.weaknesses)
-        mem.attack_patterns = list(existing_patterns | set(new_patterns))[-10:]
-        mem.weaknesses = list(existing_weaknesses | set(new_weaknesses))[-10:]
+            # Merge new patterns/weaknesses (keep at most 10 unique entries each)
+            existing_patterns = set(mem.attack_patterns)
+            existing_weaknesses = set(mem.weaknesses)
+            mem.attack_patterns = list(existing_patterns | set(new_patterns))[-10:]
+            mem.weaknesses = list(existing_weaknesses | set(new_weaknesses))[-10:]
 
-        # Update running average damage
-        total = mem.avg_damage_recv * mem.round_count + total_damage_dealt_to_npc
-        mem.round_count += total_rounds
-        mem.avg_damage_recv = total / mem.round_count if mem.round_count > 0 else 0.0
+            # Update running average damage
+            total = mem.avg_damage_recv * mem.round_count + total_damage_dealt_to_npc
+            mem.round_count += total_rounds
+            mem.avg_damage_recv = total / mem.round_count if mem.round_count > 0 else 0.0
 
-        await db.commit()
+            await db.commit()
         print(f"[MEMORY] Updated NPC memory for player {player_id}: "
               f"patterns={new_patterns}, weaknesses={new_weaknesses}", flush=True)
     except Exception as e:
@@ -429,6 +473,7 @@ class BattleSession:
             "is_npc_match": is_npc,
             "player_id": player_id,
             "player_uuid": player_uuid,
+            "npc_memory": {},
             "attack_text": "",
             "attack_image": None,
             "attacker_id": player_id,
@@ -461,8 +506,14 @@ class BattleSession:
             ("npc_generate", node_output_dict)  # NPC words, before scoring
             ("npc_score",    node_output_dict)  # damage + referee comment
         """
-        config: RunnableConfig = {"configurable": {"thread_id": self._thread_id, "db": db}}
+        config: RunnableConfig = {"configurable": {"thread_id": self._thread_id}}
         turn_input = self._build_turn_input(attack_text, attacker_id, image_b64, sender_display)
+        if self._initial_state["is_npc_match"]:
+            # Pre-fetch opponent memory sequentially: npc_generate runs in
+            # parallel with the caller's DB writes and must not share the session.
+            turn_input["npc_memory"] = await _get_memory(
+                db, self._initial_state["player_uuid"]
+            )
 
         async for chunk in self._graph.astream(turn_input, config=config, stream_mode="updates"):
             node_name = next(iter(chunk))
@@ -497,6 +548,14 @@ class BattleSession:
             "attack_text": attack_text,
             "attack_image": image_b64,
             "attacker_id": attacker_id,
+            # Per-turn resets, applied as input before the superstep so the
+            # parallel branches never double-write the same key.
+            "npc_text": "",
+            "npc_damage": 0,
+            "npc_ref_comment": "",
+            "npc_ref_display_text": "",
+            "game_over": False,
+            "winner": None,
         }
         if not self._initialized:
             turn_input = {**self._initial_state, **turn_input}
@@ -512,8 +571,12 @@ class BattleSession:
         sender_display: str | None = None,
     ) -> BattleState:
         """Process one player's attack and return the final BattleState."""
-        config: RunnableConfig = {"configurable": {"thread_id": self._thread_id, "db": db}}
+        config: RunnableConfig = {"configurable": {"thread_id": self._thread_id}}
         turn_input = self._build_turn_input(attack_text, attacker_id, image_b64, sender_display)
+        if self._initial_state["is_npc_match"]:
+            turn_input["npc_memory"] = await _get_memory(
+                db, self._initial_state["player_uuid"]
+            )
         result = await self._graph.ainvoke(turn_input, config=config)
         self._last_messages = list(result.get("messages", []))
         return result

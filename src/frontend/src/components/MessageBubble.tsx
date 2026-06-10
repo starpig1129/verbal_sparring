@@ -1,4 +1,5 @@
 // src/frontend/src/components/MessageBubble.tsx
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 
 type SystemProps = { kind: 'system'; displayText: string }
@@ -15,7 +16,9 @@ type RefereeProps = { kind: 'referee'; displayText: string }
 
 type Props = SystemProps | AttackProps | RefereeProps
 
-export default function MessageBubble(props: Props) {
+// Memoised: chat entries are immutable once added, so old bubbles need not
+// re-render every time a new message extends the log.
+function MessageBubble(props: Props) {
   if (props.kind === 'system') {
     return (
       <motion.div
@@ -106,3 +109,5 @@ export default function MessageBubble(props: Props) {
 
   return null
 }
+
+export default memo(MessageBubble)

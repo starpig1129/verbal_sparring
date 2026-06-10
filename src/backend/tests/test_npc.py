@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -9,10 +9,17 @@ from src.backend.services.npc.agent import run_npc_turn
 MOCK_NPC_RESPONSE = "你的攻擊力跟你的智商一樣低！"
 
 
+def _mock_llm(content: str) -> AsyncMock:
+    llm = AsyncMock()
+    msg = MagicMock()
+    msg.content = content
+    llm.ainvoke.return_value = msg
+    return llm
+
+
 async def test_npc_generates_attack(db):
     opponent_id = str(uuid.uuid4())
-    with patch("src.backend.services.npc.agent._call_ollama", new_callable=AsyncMock) as mock:
-        mock.return_value = MOCK_NPC_RESPONSE
+    with patch("src.backend.services.npc.agent._llm", _mock_llm(MOCK_NPC_RESPONSE)):
         result = await run_npc_turn(
             db=db,
             match_id=str(uuid.uuid4()),
@@ -45,9 +52,13 @@ async def test_npc_uses_memory_in_prompt(db):
 
     async def capture_call(messages):
         captured_prompt.extend(messages)
-        return "記憶驅動攻擊！"
+        msg = MagicMock()
+        msg.content = "記憶驅動攻擊！"
+        return msg
 
-    with patch("src.backend.services.npc.agent._call_ollama", side_effect=capture_call):
+    mock_llm = AsyncMock()
+    mock_llm.ainvoke.side_effect = capture_call
+    with patch("src.backend.services.npc.agent._llm", mock_llm):
         await run_npc_turn(
             db=db,
             match_id=str(uuid.uuid4()),

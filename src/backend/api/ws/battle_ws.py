@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from langchain_core.messages import AIMessage, HumanMessage
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.backend.core.database import get_session
@@ -18,16 +19,82 @@ from src.backend.services.game.battle_session import (
     create_battle_session,
     destroy_battle_session,
     get_battle_session,
+    spawn_background_task,
 )
 from src.backend.services.game.room import GameRoom, rooms
 
 router = APIRouter()
+
+# Upper bound for one client message (text + base64 image). The frontend
+# compresses images to ≤768px JPEG, well under this; anything bigger is
+# either a raw photo or abuse.
+MAX_WS_MESSAGE_CHARS = 1_000_000
 
 # Active connections per username to track online status
 active_connections_count: dict[str, int] = {}
 
 # Online players in the lobby: player_id (str) -> {"username": str, "websocket": WebSocket, "is_searching": bool}
 online_players: dict[str, dict] = {}
+
+# Serialises the scan-and-claim step of matchmaking. Without it two players
+# connecting simultaneously can each pick the other during an await and
+# create two matches. (Single-process assumption, like the registries above.)
+_matchmaking_lock = asyncio.Lock()
+
+
+async def _try_matchmake(
+    db: AsyncSession, player_uuid: str, username: str, websocket: WebSocket
+) -> None:
+    """Pair the player with a searching opponent, or report queued.
+
+    The opponent scan and the is_searching flag flips happen atomically under
+    the matchmaking lock; the slower DB write and notifications happen after.
+    """
+    opponent_uuid: str | None = None
+    opponent_info: dict | None = None
+
+    async with _matchmaking_lock:
+        for op_uuid, op_info in online_players.items():
+            if op_uuid != player_uuid and op_info.get("is_searching"):
+                opponent_uuid = op_uuid
+                opponent_info = op_info
+                break
+        if opponent_uuid and opponent_info:
+            # Claim both players inside the lock so no one else can match them.
+            if player_uuid in online_players:
+                online_players[player_uuid]["is_searching"] = False
+            opponent_info["is_searching"] = False
+
+    if not (opponent_uuid and opponent_info):
+        await websocket.send_text(json.dumps({
+            "type": "queued",
+            "message": "已加入配對佇列，尋找對手中..."
+        }, ensure_ascii=False))
+        return
+
+    match = Match(
+        player1_id=uuid.UUID(opponent_uuid),
+        player2_id=uuid.UUID(player_uuid),
+        status=MatchStatus.pending,
+    )
+    db.add(match)
+    await db.commit()
+    match_id = str(match.id)
+
+    try:
+        await opponent_info["websocket"].send_text(json.dumps({
+            "type": "match_found",
+            "match_id": match_id,
+            "opponent": username
+        }, ensure_ascii=False))
+    except Exception:
+        pass
+
+    await websocket.send_text(json.dumps({
+        "type": "match_found",
+        "match_id": match_id,
+        "opponent": opponent_info["username"]
+    }, ensure_ascii=False))
 
 
 async def _persist_round(
@@ -41,8 +108,9 @@ async def _persist_round(
     damage: int,
     referee_comment: str,
     hp_snapshot: dict,
+    bump_attacker_damage: bool = False,
 ) -> None:
-    """Persist a single round's result to the database."""
+    """Persist a single round's result (and attacker damage stats) in one commit."""
     rnd = GameRound(
         match_id=uuid.UUID(match_id),
         round_number=round_number,
@@ -55,35 +123,57 @@ async def _persist_round(
         hp_snapshot=hp_snapshot,
     )
     db.add(rnd)
+    if bump_attacker_damage and attacker_id:
+        await db.execute(
+            update(Player)
+            .where(Player.id == uuid.UUID(attacker_id))
+            .values(total_damage=Player.total_damage + damage)
+        )
     await db.commit()
+
+
+def _rebuild_initial_messages(history_rounds: list[dict], is_npc: bool) -> list:
+    """Rebuild LangChain battle messages from plain history-round dicts.
+
+    NPC matches map NPC turns to AIMessage and human turns to HumanMessage;
+    PvP matches label every turn as a HumanMessage prefixed with the sender.
+    """
+    msgs: list = []
+    for r in history_rounds:
+        sender = r["attacker"]
+        text = r["original_text"] or ""
+        if is_npc:
+            msgs.append(
+                AIMessage(content=text) if sender == "NPC" else HumanMessage(content=text)
+            )
+        else:
+            msgs.append(HumanMessage(content=f"[{sender}] {text}"))
+    return msgs
 
 
 async def _finish_match(
     db: AsyncSession, match_id: str, winner_id: str | None
 ) -> None:
-    """Mark a match as finished and update wins/losses for the players."""
+    """Mark a match as finished and update wins/losses in a single commit."""
     result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
     match = result.scalar_one_or_none()
     if not match:
+        await db.rollback()
         return
 
     match.status = MatchStatus.finished
     match.winner_id = uuid.UUID(winner_id) if winner_id else None
     match.ended_at = datetime.now(timezone.utc)
-    await db.commit()
 
     p1_id = match.player1_id
     p2_id = match.player2_id
 
     if winner_id:
         w_uuid = uuid.UUID(winner_id)
-        # Winner gets a win
-        w_res = await db.execute(select(Player).where(Player.id == w_uuid))
-        winner = w_res.scalar_one_or_none()
-        if winner:
-            winner.wins += 1
+        await db.execute(
+            update(Player).where(Player.id == w_uuid).values(wins=Player.wins + 1)
+        )
 
-        # Loser gets a loss
         loser_uuid = None
         if p1_id == w_uuid:
             loser_uuid = p2_id
@@ -91,19 +181,18 @@ async def _finish_match(
             loser_uuid = p1_id
 
         if loser_uuid:
-            l_res = await db.execute(select(Player).where(Player.id == loser_uuid))
-            loser = l_res.scalar_one_or_none()
-            if loser:
-                loser.losses += 1
-        await db.commit()
-    else:
+            await db.execute(
+                update(Player)
+                .where(Player.id == loser_uuid)
+                .values(losses=Player.losses + 1)
+            )
+    elif p2_id is None:
         # NPC wins (or draw). In PvE, player1 is defeated by NPC.
-        if p2_id is None:
-            l_res = await db.execute(select(Player).where(Player.id == p1_id))
-            loser = l_res.scalar_one_or_none()
-            if loser:
-                loser.losses += 1
-                await db.commit()
+        await db.execute(
+            update(Player).where(Player.id == p1_id).values(losses=Player.losses + 1)
+        )
+
+    await db.commit()
 
 
 async def _do_game_over(
@@ -126,9 +215,9 @@ async def _do_game_over(
 
     if is_npc:
         damage_to_npc = 100 - max(0, out["hp"].get("NPC", 0))
-        asyncio.create_task(
+        spawn_background_task(
             analyze_and_update_player_memory(
-                db, attacker_player_id, battle_messages,
+                attacker_player_id, battle_messages,
                 damage_to_npc, out["round_number"],
             )
         )
@@ -143,15 +232,10 @@ async def _do_game_over(
         ),
         "winner": winner_key,
     })
-    room.reset()
-    if is_npc:
-        room.hp["NPC"] = 100
-    await room.broadcast({
-        "type": "system",
-        "message": "新的一局開始！",
-        "hp_status": room.hp,
-        "current_turn": room.current_turn,
-    })
+    # The match is finished — lock the room so further attacks get turn_error.
+    # A rematch creates a fresh Match via POST /api/matches; reusing this one
+    # would write duplicate round_numbers into a finished match.
+    room.current_turn = ""
 
 
 @router.websocket("/ws/battle/{match_id}/{player_id}")
@@ -220,9 +304,11 @@ async def battle_ws(
             if p2:
                 p2_name = p2.username
 
-        # Query all past rounds from DB
+        # Query all past rounds from DB. image_b64 is deferred: it can be
+        # megabytes per row and nothing in history restoration needs it.
         rounds_result = await db.execute(
             select(GameRound)
+            .options(defer(GameRound.image_b64))
             .where(GameRound.match_id == uuid.UUID(match_id))
             .order_by(GameRound.round_number.asc())
         )
@@ -306,30 +392,38 @@ async def battle_ws(
         # Eagerly initialize the battle session using history
         session = get_battle_session(match_id)
         if not session:
-            initial_messages = []
-            for r in rounds:
-                r_sender = p1_name if r.attacker_id == match.player1_id else (p2_name if r.attacker_id == match.player2_id else "NPC")
-                if is_npc:
-                    if r_sender == "NPC":
-                        initial_messages.append(AIMessage(content=r.original_text or ""))
-                    else:
-                        initial_messages.append(HumanMessage(content=r.original_text or ""))
-                else:
-                    initial_messages.append(HumanMessage(content=f"[{r_sender}] {r.original_text or ''}"))
-
             session = create_battle_session(
                 match_id=match_id,
                 player_id=player_id,
                 player_uuid=attacker_player_id,
                 is_npc=is_npc,
                 initial_hp=dict(room.hp),
-                initial_messages=initial_messages,
+                initial_messages=_rebuild_initial_messages(history_rounds, is_npc),
             )
+
+        # Connect-phase queries are done. End the implicit read transaction so
+        # this long-lived WS does not pin a pool connection while idle; all
+        # in-loop DB work is commit-terminated and re-begins as needed.
+        await db.rollback()
 
         try:
             while True:
                 raw = await websocket.receive_text()
-                print(f"[WS RECEIVED] Message from {player_id}: {raw}", flush=True)
+
+                # Heartbeat: keeps the connection alive through proxies
+                # (Cloudflare drops WS connections idle for ~100 seconds).
+                if raw == "ping":
+                    await websocket.send_text("pong")
+                    continue
+
+                if len(raw) > MAX_WS_MESSAGE_CHARS:
+                    await room.send_to(
+                        player_id,
+                        {"type": "error", "message": "訊息過大，圖片請壓縮後再上傳"},
+                    )
+                    continue
+
+                print(f"[WS RECEIVED] Message from {player_id}: {raw[:200]}", flush=True)
 
                 try:
                     payload_data = json.loads(raw)
@@ -379,28 +473,23 @@ async def battle_ws(
 
                     session = get_battle_session(match_id)
                     if not session:
-                        initial_messages = []
-                        for r in rounds:
-                            r_sender = p1_name if r.attacker_id == match.player1_id else (p2_name if r.attacker_id == match.player2_id else "NPC")
-                            if is_npc:
-                                if r_sender == "NPC":
-                                    initial_messages.append(AIMessage(content=r.original_text or ""))
-                                else:
-                                    initial_messages.append(HumanMessage(content=r.original_text or ""))
-                            else:
-                                initial_messages.append(HumanMessage(content=f"[{r_sender}] {r.original_text or ''}"))
                         session = create_battle_session(
                             match_id=match_id,
                             player_id=player_id,
                             player_uuid=attacker_player_id,
                             is_npc=is_npc,
                             initial_hp=dict(room.hp),
-                            initial_messages=initial_messages,
+                            initial_messages=_rebuild_initial_messages(history_rounds, is_npc),
                         )
 
-                    # Stream results node-by-node so we can broadcast each step immediately.
-                    # _npc_pending_text carries the NPC's words from npc_generate to npc_score.
+                    # Stream results node-by-node so we can broadcast each step
+                    # immediately. score_player_attack and npc_generate run in
+                    # parallel, so npc_generate may finish FIRST — its text is
+                    # buffered and only broadcast after the player's attack
+                    # result, preserving the "my damage, then NPC reply" order.
                     _npc_pending_text: str = ""
+                    _player_scored = False
+                    _round_over = False
                     async for node_name, out in session.process_attack_streaming(
                         attack_text=text,
                         attacker_id=player_id,
@@ -425,14 +514,8 @@ async def battle_ws(
                                 attacker_player_id, text, image_b64,
                                 out["ref_display_text"], out["damage"],
                                 out["ref_comment"], dict(room.hp),
+                                bump_attacker_damage=True,
                             )
-                            attacker_row = await db.execute(
-                                select(Player).where(Player.id == uuid.UUID(attacker_player_id))
-                            )
-                            attacker = attacker_row.scalar_one_or_none()
-                            if attacker:
-                                attacker.total_damage += out["damage"]
-                                await db.commit()
 
                             # Broadcast immediately — client sees result before NPC thinks
                             await room.broadcast({
@@ -445,28 +528,43 @@ async def battle_ws(
                                 "hp_status": dict(room.hp),
                                 "current_turn": room.current_turn,
                             })
+                            _player_scored = True
 
                             if out.get("game_over"):
+                                _round_over = True
                                 await _do_game_over(
                                     session, db, room, match_id, is_npc,
                                     out, player_id, attacker_player_id,
                                 )
+                            elif _npc_pending_text:
+                                # NPC finished before the referee — flush its
+                                # buffered words now that the order is right.
+                                await room.broadcast({
+                                    "type": "npc_typing",
+                                    "npc_text": _npc_pending_text,
+                                })
 
                         elif node_name == "npc_generate":
-                            # ── NPC words ready, referee still scoring ────────────
+                            # ── NPC words ready (referee may still be scoring) ────
                             _npc_pending_text = out["npc_text"]
                             print(
                                 f"[WS PROCESS] NPC typing: {_npc_pending_text[:30]}...",
                                 flush=True,
                             )
-                            # Show NPC text immediately as a pending bubble;
-                            # npc_score will follow shortly with damage + HP update.
-                            await room.broadcast({
-                                "type": "npc_typing",
-                                "npc_text": _npc_pending_text,
-                            })
+                            if _player_scored and not _round_over:
+                                # Show NPC text as a pending bubble; npc_score
+                                # follows shortly with damage + HP update.
+                                await room.broadcast({
+                                    "type": "npc_typing",
+                                    "npc_text": _npc_pending_text,
+                                })
 
                         elif node_name == "npc_score":
+                            if _round_over or not out:
+                                # Player's attack already ended the match — the
+                                # parallel NPC turn is discarded.
+                                continue
+
                             # ── NPC damage + referee comment ready ────────────────
                             room.hp = dict(out["hp"])
                             room.round_number = out["round_number"]
@@ -580,52 +678,7 @@ async def queue_ws(
         }
 
         if is_searching_init:
-            # Check if there is an opponent who is searching and not the current player
-            opponent_uuid = None
-            opponent_info = None
-            for op_uuid, op_info in online_players.items():
-                if op_uuid != player_uuid and op_info.get("is_searching"):
-                    opponent_uuid = op_uuid
-                    opponent_info = op_info
-                    break
-
-            if opponent_uuid and opponent_info:
-                # Set both to not searching
-                online_players[player_uuid]["is_searching"] = False
-                opponent_info["is_searching"] = False
-
-                # Create a match in the database
-                match = Match(
-                    player1_id=uuid.UUID(opponent_uuid),
-                    player2_id=uuid.UUID(player_uuid),
-                    status=MatchStatus.pending,
-                )
-                db.add(match)
-                await db.commit()
-
-                match_id = str(match.id)
-
-                # Notify opponent
-                try:
-                    await opponent_info["websocket"].send_text(json.dumps({
-                        "type": "match_found",
-                        "match_id": match_id,
-                        "opponent": username
-                    }, ensure_ascii=False))
-                except Exception:
-                    pass
-
-                # Notify current player
-                await websocket.send_text(json.dumps({
-                    "type": "match_found",
-                    "match_id": match_id,
-                    "opponent": opponent_info["username"]
-                }, ensure_ascii=False))
-            else:
-                await websocket.send_text(json.dumps({
-                    "type": "queued",
-                    "message": "已加入配對佇列，尋找對手中..."
-                }, ensure_ascii=False))
+            await _try_matchmake(db, player_uuid, username, websocket)
 
         # Keep the connection alive and listen for search/cancel/decline actions
         while True:
@@ -643,53 +696,7 @@ async def queue_ws(
             if msg_type == "start_matchmaking":
                 if player_uuid in online_players:
                     online_players[player_uuid]["is_searching"] = True
-
-                # Check if there is an opponent who is searching and not the current player
-                opponent_uuid = None
-                opponent_info = None
-                for op_uuid, op_info in online_players.items():
-                    if op_uuid != player_uuid and op_info.get("is_searching"):
-                        opponent_uuid = op_uuid
-                        opponent_info = op_info
-                        break
-
-                if opponent_uuid and opponent_info:
-                    # Set both to not searching
-                    online_players[player_uuid]["is_searching"] = False
-                    opponent_info["is_searching"] = False
-
-                    # Create a match in the database
-                    match = Match(
-                        player1_id=uuid.UUID(opponent_uuid),
-                        player2_id=uuid.UUID(player_uuid),
-                        status=MatchStatus.pending,
-                    )
-                    db.add(match)
-                    await db.commit()
-
-                    match_id = str(match.id)
-
-                    # Notify opponent
-                    try:
-                        await opponent_info["websocket"].send_text(json.dumps({
-                            "type": "match_found",
-                            "match_id": match_id,
-                            "opponent": username
-                        }, ensure_ascii=False))
-                    except Exception:
-                        pass
-
-                    # Notify current player
-                    await websocket.send_text(json.dumps({
-                        "type": "match_found",
-                        "match_id": match_id,
-                        "opponent": opponent_info["username"]
-                    }, ensure_ascii=False))
-                else:
-                    await websocket.send_text(json.dumps({
-                        "type": "queued",
-                        "message": "已加入配對佇列，尋找對手中..."
-                    }, ensure_ascii=False))
+                await _try_matchmake(db, player_uuid, username, websocket)
 
             elif msg_type == "cancel_matchmaking":
                 if player_uuid in online_players:
@@ -711,6 +718,10 @@ async def queue_ws(
                                 "type": "challenge_declined",
                                 "message": "對手拒絕了你的挑戰"
                             })
+                    else:
+                        # Nothing to change — release the read transaction so
+                        # the idle queue WS doesn't pin a pool connection.
+                        await db.rollback()
 
     except WebSocketDisconnect:
         pass

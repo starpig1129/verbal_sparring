@@ -38,6 +38,15 @@ class Settings(BaseSettings):
 
     referee_temperature: float = 0.8
     player_temperature: float = 0.9
+
+    # Generation caps shared by both providers; referee JSON and NPC taunts
+    # are short, so a hard ceiling prevents runaway long generations.
+    llm_max_tokens: int = 256
+    # Ollama-only tuning: keep the model resident between rounds and pin the
+    # context window so an oversized prompt fails loudly instead of silently
+    # truncating the system prompt.
+    ollama_keep_alive: str = "30m"
+    ollama_num_ctx: int = 4096
     
     # Path to prompts configuration file
     prompts_yaml_path: str = "src/backend/config/prompts.yaml"
@@ -121,6 +130,7 @@ def make_chat_llm(model_key: str, temperature: float):
             api_key=settings.vllm_api_key,
             model=model_name,
             temperature=temperature,
+            max_tokens=settings.llm_max_tokens,
             extra_body={"chat_template_kwargs": {"enable_thinking": False}},
         )
     else:
@@ -133,4 +143,7 @@ def make_chat_llm(model_key: str, temperature: float):
             base_url=settings.ollama_url,
             model=model_name,
             temperature=temperature,
+            num_predict=settings.llm_max_tokens,
+            num_ctx=settings.ollama_num_ctx,
+            keep_alive=settings.ollama_keep_alive,
         )

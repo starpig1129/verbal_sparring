@@ -34,7 +34,7 @@ class GameRound(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     match_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("matches.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("matches.id"), nullable=False, index=True
     )
     round_number: Mapped[int] = mapped_column(Integer, nullable=False)
     attacker_id: Mapped[uuid.UUID | None] = mapped_column(

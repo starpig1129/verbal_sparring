@@ -4,6 +4,37 @@ import type { AttackPayload } from '../types/game'
 
 type Props = { onSend: (p: AttackPayload) => void; disabled: boolean }
 
+// Vision models don't benefit beyond ~768px, and raw phone photos are
+// multi-MB base64 blobs that bloat the WS message, the prompt, and the DB.
+const MAX_IMAGE_EDGE = 768
+const JPEG_QUALITY = 0.8
+
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('canvas unavailable'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', JPEG_QUALITY))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('image load failed'))
+    }
+    img.src = url
+  })
+}
+
 export default function AttackInput({ onSend, disabled }: Props) {
   const [text, setText] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -14,13 +45,19 @@ export default function AttackInput({ onSend, disabled }: Props) {
     setText('')
   }
 
-  function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => onSend({ text, image: reader.result as string })
-    reader.readAsDataURL(file)
     e.target.value = ''
+    if (!file) return
+    try {
+      const image = await compressImage(file)
+      onSend({ text, image })
+    } catch {
+      // Fall back to the raw file if canvas compression fails
+      const reader = new FileReader()
+      reader.onload = () => onSend({ text, image: reader.result as string })
+      reader.readAsDataURL(file)
+    }
   }
 
   return (

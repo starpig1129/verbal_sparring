@@ -17,7 +17,13 @@ def make_engine(url: str):
     Returns:
         An AsyncEngine instance.
     """
-    return create_async_engine(url, echo=False)
+    return create_async_engine(
+        url,
+        echo=False,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+    )
 
 
 def make_session_factory(engine):

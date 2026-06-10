@@ -1,5 +1,6 @@
 """GameRoom: in-memory state management for a single match session."""
 
+import asyncio
 import json
 from dataclasses import dataclass, field
 
@@ -50,11 +51,23 @@ class GameRoom:
     async def broadcast(self, message: dict) -> None:
         """Send a JSON-serialised message to every connected player.
 
+        Sends run concurrently; a dead connection is dropped from the room
+        instead of raising and starving the remaining players.
+
         Args:
             message: Dict to serialise and send to all connections.
         """
-        for ws in self.connections.values():
-            await ws.send_text(json.dumps(message, ensure_ascii=False))
+        if not self.connections:
+            return
+        payload = json.dumps(message, ensure_ascii=False)
+        player_ids = list(self.connections.keys())
+        results = await asyncio.gather(
+            *(self.connections[pid].send_text(payload) for pid in player_ids),
+            return_exceptions=True,
+        )
+        for pid, result in zip(player_ids, results):
+            if isinstance(result, BaseException):
+                self.connections.pop(pid, None)
 
     async def send_to(self, player_id: str, message: dict) -> None:
         """Send a JSON-serialised message to a specific player.

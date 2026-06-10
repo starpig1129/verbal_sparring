@@ -30,5 +30,5 @@ test('renders player entries from API', async () => {
   })
   wrap(<LeaderboardPage />)
   await waitFor(() => expect(screen.getByText('ALICE')).toBeInTheDocument())
-  expect(screen.getByText('9000')).toBeInTheDocument()
+  expect(screen.getByText((9000).toLocaleString())).toBeInTheDocument()
 })

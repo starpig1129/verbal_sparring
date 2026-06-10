@@ -120,11 +120,21 @@ export function useGameState(myPlayerId: string) {
     }
   }, [myPlayerId])
 
+  // Clear all battle state when switching to a new match (e.g. rematch).
+  const reset = useCallback(() => {
+    setHp({})
+    setCurrentTurn('')
+    setChatLog([])
+    setGameOver(null)
+    setLastDamageEvent(null)
+    setChallengeDeclinedMessage(null)
+  }, [])
+
   return {
     hp, currentTurn,
     isMyTurn: currentTurn === myPlayerId,
     chatLog, gameOver, lastDamageEvent,
     challengeDeclinedMessage,
-    handleMessage, addOptimisticEntry,
+    handleMessage, addOptimisticEntry, reset,
   }
 }

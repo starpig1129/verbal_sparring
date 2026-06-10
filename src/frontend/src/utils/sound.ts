@@ -5,7 +5,13 @@ class SoundManager {
 
   private init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const Ctor = window.AudioContext || (window as any).webkitAudioContext
+      if (typeof Ctor !== 'function') return // no Web Audio (old browser / test env)
+      try {
+        this.ctx = new Ctor()
+      } catch {
+        return
+      }
     }
     if (this.ctx.state === 'suspended') {
       this.ctx.resume()

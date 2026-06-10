@@ -44,16 +44,16 @@ class Match(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     player1_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("players.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("players.id"), nullable=True, index=True
     )
     player2_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("players.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("players.id"), nullable=True, index=True
     )
     winner_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("players.id"), nullable=True
     )
     status: Mapped[MatchStatus] = mapped_column(
-        SAEnum(MatchStatus), default=MatchStatus.pending, nullable=False
+        SAEnum(MatchStatus), default=MatchStatus.pending, nullable=False, index=True
     )
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

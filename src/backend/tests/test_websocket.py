@@ -97,6 +97,8 @@ def test_websocket_connect_and_system_message():
             with client.websocket_connect(
                 f"/ws/battle/{match_id}/ws_tester?token={token}"
             ) as ws:
+                history = json.loads(ws.receive_text())
+                assert history["type"] == "history"
                 msg = json.loads(ws.receive_text())
                 assert msg["type"] == "system"
                 assert "ws_tester" in msg["message"]
@@ -131,8 +133,11 @@ def test_websocket_attack_reduces_hp():
             with client.websocket_connect(
                 f"/ws/battle/{match_id}/ws_attacker?token={token}"
             ) as ws:
+                ws.receive_text()  # consume the history message
                 ws.receive_text()  # consume the system join message
                 ws.send_text(json.dumps({"text": "你好遜"}))
+                msg = json.loads(ws.receive_text())
+                assert msg["type"] == "player_typing"
                 msg = json.loads(ws.receive_text())
                 assert msg["type"] == "attack"
                 assert msg["damage"] == 20

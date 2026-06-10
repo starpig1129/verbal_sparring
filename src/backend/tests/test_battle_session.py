@@ -217,3 +217,59 @@ async def test_referee_prompt_includes_style(db):
     assert outputs["score_player_attack"]["referee_style"] == "武俠說書人"
     # Round 1 is not a rotation — the join announcement covers it
     assert outputs["score_player_attack"]["referee_style_changed"] is False
+
+
+async def test_npc_prompt_includes_trained_genre(db):
+    """The NPC's fighting school reaches its prompt with the trained cue format."""
+    from src.backend.services.game import battle_session as bs
+
+    captured: list = []
+
+    async def capture(msgs):
+        captured.append(msgs)
+        msg = MagicMock()
+        msg.content = "隔壁阿明都升官了，你呢？"
+        return msg
+
+    mock_npc = AsyncMock()
+    mock_npc.ainvoke.side_effect = capture
+    mock_ref = _delayed_llm(REF_JSON, 0.01)
+    genre = {
+        "key": "relative",
+        "name": "Holiday Relatives",
+        "display": "過年親戚問候流",
+        "directive": "Mock them like prying holiday relatives.",
+    }
+
+    with patch.object(bs, "NPC_GENRES", [genre]), \
+         patch("src.backend.services.game.battle_session._referee_llm", mock_ref), \
+         patch("src.backend.services.game.battle_session._npc_llm", mock_npc):
+        session = BattleSession(
+            match_id="m-genre",
+            player_id="p1",
+            player_uuid=str(uuid.uuid4()),
+            is_npc=True,
+            initial_hp={"p1": 100, "NPC": 100},
+        )
+        assert session.npc_genre["name"] == "Holiday Relatives"
+        async for _name, _out in session.process_attack_streaming("嗆", "p1", db):
+            pass
+
+    # The system message of the NPC generation call carries the exact
+    # "Style: <Name>." cue the LoRA was trained on, plus the directive.
+    system_msg = captured[0][0]
+    assert "Style: Holiday Relatives." in system_msg.content
+    assert "prying holiday relatives" in system_msg.content
+
+
+def test_npc_genres_loaded_from_config():
+    """All 8 trained fighting schools are available in production config."""
+    from src.backend.core.config import NPC_GENRES
+
+    assert len(NPC_GENRES) == 8
+    names = {g["name"] for g in NPC_GENRES}
+    assert names == {
+        "Elegant Sarcasm", "Grounded Street Slang", "Friendly Banter",
+        "Internet Memes", "Workplace Passive Aggressive",
+        "Relationship Gaslighting", "Toxic Chicken Soup", "Holiday Relatives",
+    }

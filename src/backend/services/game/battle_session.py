@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.backend.core.config import (
     MEMORY_ANALYSIS_PROMPT,
+    NPC_GENRES,
     NPC_SYSTEM_PROMPT,
     REFEREE_FEW_SHOTS,
     REFEREE_STYLES,
@@ -117,6 +118,10 @@ class BattleState(TypedDict):
     style_offset: int
     referee_style: str
     referee_style_changed: bool
+
+    # NPC fighting school for this match — one of the 8 genres the player
+    # LoRA was trained on ({key, name, display, directive}); {} disables.
+    npc_genre: dict
 
     # Referee output for the human's attack
     damage: int
@@ -262,8 +267,17 @@ async def _generate_npc_attack(state: BattleState) -> str:
         if weaknesses:
             memory_hint += f"\n[Exploitable weaknesses]: {weaknesses}"
 
+    # Activate the trained fighting school. "Style: <Name>." is the exact cue
+    # format the player LoRA saw in its training data; the directive adds
+    # extra steering on top.
+    genre = state.get("npc_genre") or {}
+    genre_hint = ""
+    if genre:
+        genre_hint = f"\nStyle: {genre['name']}. {genre['directive']}"
+
     system_content = (
-        f"{NPC_SYSTEM_PROMPT}\n\n"
+        f"{NPC_SYSTEM_PROMPT}\n"
+        f"{genre_hint}\n"
         f"[Round {state['round_number']} | NPC HP: {npc_hp} | Opponent HP: {player_hp}]"
         f"{memory_hint}"
     )
@@ -581,6 +595,10 @@ class BattleSession:
         self._last_messages: list[BaseMessage] = list(initial_messages) if initial_messages else []
         # Random starting persona so consecutive matches feel different
         self.style_offset = random.randrange(len(REFEREE_STYLES)) if REFEREE_STYLES else 0
+        # NPC picks one trained fighting school per match
+        self.npc_genre: dict = (
+            random.choice(NPC_GENRES) if (is_npc and NPC_GENRES) else {}
+        )
         self._initial_state: BattleState = {
             "messages": initial_messages or [],
             "hp": dict(initial_hp),
@@ -594,6 +612,7 @@ class BattleSession:
             "style_offset": self.style_offset,
             "referee_style": "",
             "referee_style_changed": False,
+            "npc_genre": self.npc_genre,
             "attack_text": "",
             "attack_image": None,
             "attacker_id": player_id,

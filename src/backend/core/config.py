@@ -104,6 +104,16 @@ REFEREE_STYLES = [
     for s in _prompts_data["referee"].get("styles", [])
 ]
 NPC_SYSTEM_PROMPT = _prompts_data["npc"]["system_prompt"].strip()
+# The 8 fighting schools the player LoRA was trained on; empty disables.
+NPC_GENRES = [
+    {
+        "key": g["key"],
+        "name": g["name"],
+        "display": g["display"],
+        "directive": g["directive"],
+    }
+    for g in _prompts_data["npc"].get("genres", [])
+]
 MEMORY_ANALYSIS_PROMPT = _prompts_data["memory_analysis"]["system_prompt"].strip()
 
 

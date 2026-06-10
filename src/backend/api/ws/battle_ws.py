@@ -482,12 +482,18 @@ async def battle_ws(
                 initial_messages=_rebuild_initial_messages(history_rounds, is_npc),
             )
 
-        # Announce the referee persona currently in effect (主題回合)
+        # Announce the referee persona (主題回合) and the NPC's fighting school
+        # in one system message
         current_style = style_for_round(session.style_offset, room.round_number + 1)
+        announce_parts = []
         if current_style:
+            announce_parts.append(f"📜 本階段裁判風格：「{current_style['name']}」")
+        if session.npc_genre:
+            announce_parts.append(f"🤖 NPC 流派：「{session.npc_genre['display']}」")
+        if announce_parts:
             await room.send_to(player_id, {
                 "type": "system",
-                "message": f"📜 本階段裁判風格：「{current_style['name']}」",
+                "message": "　".join(announce_parts),
                 "hp_status": room.hp,
                 "current_turn": room.current_turn,
             })

@@ -280,10 +280,20 @@ async def _do_game_over(
     out: dict,
     player_id: str,
     attacker_player_id: str,
+    player_name_to_uuid: dict | None = None,
+    is_last_stand_result: bool = False,
 ) -> None:
     """Broadcast game-over, persist result, schedule memory analysis, then reset room."""
     winner_key = out["winner"]  # URL-param player_id or "NPC"
-    winner_uuid = attacker_player_id if winner_key == player_id else None
+    # Map winner's display key to their DB UUID.  In PvP, the winner may be
+    # either player so we look them up via the name→UUID table built from the
+    # match record; fall back to the current connection's UUID if not found.
+    if winner_key == player_id:
+        winner_uuid = attacker_player_id
+    elif player_name_to_uuid and winner_key in player_name_to_uuid:
+        winner_uuid = player_name_to_uuid[winner_key]
+    else:
+        winner_uuid = None
     logger.info(f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})")
 
     _cancel_turn_timer(match_id)
@@ -301,14 +311,23 @@ async def _do_game_over(
         )
 
     await _finish_match(db, match_id, winner_uuid)
+
+    if is_last_stand_result:
+        # Show final HP values so both players understand the outcome.
+        hp_lines = " | ".join(
+            f"【{k}】{v:+d} HP" for k, v in out["hp"].items() if k != "NPC"
+        )
+        game_over_msg = f"⚔️ 血量結算！{hp_lines} → 【{winner_key}】險勝！"
+    elif winner_key != "NPC":
+        game_over_msg = f"【{winner_key}】把對手噴到生活不能自理！"
+    else:
+        game_over_msg = f"【{npc_persona}】：就這點實力？"
+
     await room.broadcast({
         "type": "game_over",
-        "message": (
-            f"【{winner_key}】把對手噴到生活不能自理！"
-            if winner_key != "NPC"
-            else f"【{npc_persona}】：就這點實力？"
-        ),
+        "message": game_over_msg,
         "winner": winner_key,
+        "hp_status": dict(out["hp"]),
     })
     # The match is finished — lock the room so further attacks get turn_error.
     # A rematch creates a fresh Match via POST /api/matches; reusing this one
@@ -381,6 +400,12 @@ async def battle_ws(
             p2 = p2_res.scalar_one_or_none()
             if p2:
                 p2_name = p2.username
+
+        # URL-param display name → DB UUID, used to resolve the winner in _do_game_over
+        # when the winner is not the current WS connection's player (PvP last-stand case).
+        player_name_to_uuid: dict[str, str] = {p1_name: str(match.player1_id)}
+        if match.player2_id:
+            player_name_to_uuid[p2_name] = str(match.player2_id)
 
         # Query all past rounds from DB. image_b64 is deferred: it can be
         # megabytes per row and nothing in history restoration needs it.
@@ -510,6 +535,10 @@ async def battle_ws(
         # this long-lived WS does not pin a pool connection while idle; all
         # in-loop DB work is commit-terminated and re-begins as needed.
         await db.rollback()
+
+        # Tracks whether the previous round triggered a last-stand (PvP only),
+        # so _do_game_over can produce the correct HP-comparison message.
+        _in_last_stand = False
 
         try:
             while True:
@@ -644,10 +673,27 @@ async def battle_ws(
 
                             if out.get("game_over"):
                                 _round_over = True
+                                was_last_stand = _in_last_stand
+                                _in_last_stand = False
                                 await _do_game_over(
                                     session, db, room, match_id, is_npc,
                                     out, player_id, attacker_player_id,
+                                    player_name_to_uuid=player_name_to_uuid,
+                                    is_last_stand_result=was_last_stand,
                                 )
+                            elif out.get("last_stand"):
+                                # PvP: target's HP hit 0 but they get one final counter.
+                                _in_last_stand = True
+                                await room.broadcast({
+                                    "type": "last_stand",
+                                    "message": (
+                                        f"💀 【{out['last_stand_player']}】被打倒！"
+                                        f"但獲得最後反擊機會！"
+                                    ),
+                                    "hp_status": dict(room.hp),
+                                    "current_turn": room.current_turn,
+                                })
+                                _schedule_turn_timeout(match_id, room)
                             elif _npc_pending_text:
                                 # NPC finished before the referee — flush its
                                 # buffered words now that the order is right.
@@ -720,6 +766,7 @@ async def battle_ws(
                                 await _do_game_over(
                                     session, db, room, match_id, is_npc,
                                     out, player_id, attacker_player_id,
+                                    player_name_to_uuid=player_name_to_uuid,
                                 )
 
                 except Exception as round_err:

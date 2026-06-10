@@ -153,6 +153,12 @@ class BattleState(TypedDict):
     game_over: bool
     winner: str | None      # UUID string or "NPC"
 
+    # Last-stand mechanic (PvP only): when the second mover is killed, they
+    # get one final counter before the match ends.  After that counter the
+    # winner is determined by comparing actual HP (may be negative).
+    last_stand: bool              # True while waiting for the killed player's final hit
+    last_stand_player: str | None # URL-param player_id of the player in last stand
+
 
 # ── Referee helpers ───────────────────────────────────────────────────────────
 
@@ -392,14 +398,11 @@ async def _node_score_player_attack(
     combo[attacker_id] = streak
 
     new_hp = dict(state["hp"])
-    new_hp[target_key] = max(0, new_hp.get(target_key, 100) - total_damage)
-    game_over = new_hp[target_key] <= 0
+    raw_target_hp = new_hp.get(target_key, 100) - total_damage
+    is_last_stand = state.get("last_stand", False)
 
-    # NPC fields are NOT reset here: npc_generate may run in the same
-    # parallel superstep and write npc_text — two writers to one plain key
-    # would raise InvalidUpdateError. Resets happen in _build_turn_input.
-    return {
-        "hp": new_hp,
+    # Shared fields for all branches
+    base = {
         "round_number": round_num,
         "damage": total_damage,
         "is_crit": is_crit,
@@ -409,8 +412,51 @@ async def _node_score_player_attack(
         "referee_style_changed": style_changed,
         "ref_comment": scored["comment"],
         "ref_display_text": scored["display_text"],
+    }
+
+    if is_last_stand:
+        # Last-stand final counter: allow HP to go negative, then end the
+        # match by comparing who has more HP (less negative = winner).
+        new_hp[target_key] = raw_target_hp
+        attacker_hp = new_hp.get(attacker_id, 0)
+        winner = attacker_id if attacker_hp >= raw_target_hp else target_key
+        return {
+            **base,
+            "hp": new_hp,
+            "game_over": True,
+            "winner": winner,
+            "last_stand": False,
+            "last_stand_player": None,
+            "current_turn": state["current_turn"],
+        }
+
+    if not is_npc and raw_target_hp <= 0:
+        # PvP killing blow — give the target one final counter instead of
+        # ending the match immediately.  HP may go negative here.
+        new_hp[target_key] = raw_target_hp
+        return {
+            **base,
+            "hp": new_hp,
+            "game_over": False,
+            "winner": None,
+            "last_stand": True,
+            "last_stand_player": target_key,
+            "current_turn": target_key,
+        }
+
+    # Normal case: NPC match or no kill in PvP.
+    new_hp[target_key] = max(0, raw_target_hp)
+    game_over = new_hp[target_key] <= 0
+    # NPC fields are NOT reset here: npc_generate may run in the same
+    # parallel superstep and write npc_text — two writers to one plain key
+    # would raise InvalidUpdateError. Resets happen in _build_turn_input.
+    return {
+        **base,
+        "hp": new_hp,
         "game_over": game_over,
         "winner": attacker_id if game_over else None,
+        "last_stand": False,
+        "last_stand_player": None,
         "current_turn": target_key if not game_over else state["current_turn"],
     }
 
@@ -683,6 +729,8 @@ class BattleSession:
             "npc_ref_display_text": "",
             "game_over": False,
             "winner": None,
+            "last_stand": False,
+            "last_stand_player": None,
         }
 
     async def process_attack_streaming(

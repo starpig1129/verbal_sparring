@@ -33,7 +33,7 @@ export default function ChatLog({ entries, myUsername, npcName }: Props) {
       )}
       {visible.map((e) => {
         if (e.kind === 'system') return <MessageBubble key={e.id} kind="system" displayText={e.displayText} />
-        if (e.kind === 'attack') return <MessageBubble key={e.id} kind="attack" sender={e.isNpc && npcName ? npcName : e.sender} displayText={e.displayText} damage={e.damage} isNpc={e.isNpc} isPending={e.isPending} isCrit={e.isCrit} combo={e.combo} myUsername={myUsername} />
+        if (e.kind === 'attack') return <MessageBubble key={e.id} kind="attack" sender={e.isNpc && npcName ? npcName : e.sender} displayText={e.displayText} damage={e.damage} isNpc={e.isNpc} isPending={e.isPending} isCrit={e.isCrit} combo={e.combo} image={e.image} myUsername={myUsername} />
         if (e.kind === 'referee') return <RefereeStamp key={e.id} comment={e.displayText} />
         return null
       })}

@@ -638,6 +638,7 @@ async def battle_ws(
                                 "referee_comment": out["ref_comment"],
                                 "hp_status": dict(room.hp),
                                 "current_turn": room.current_turn,
+                                "image": image_b64,
                             })
                             _player_scored = True
 

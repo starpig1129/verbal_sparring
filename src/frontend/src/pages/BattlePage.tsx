@@ -70,7 +70,7 @@ export default function BattlePage() {
   }, [isMyTurn, gameOver])
 
   const handleSend = useCallback((payload: { text: string; image?: string }) => {
-    if (payload.text) addOptimisticEntry(payload.text)
+    if (payload.text || payload.image) addOptimisticEntry(payload.text, payload.image)
     sendAttack(payload)
     sound.playSendMessage()
   }, [addOptimisticEntry, sendAttack])

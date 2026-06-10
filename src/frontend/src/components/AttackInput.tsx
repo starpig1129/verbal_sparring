@@ -49,13 +49,15 @@ export default function AttackInput({ onSend, disabled }: Props) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+    const currentText = text
+    setText('')
     try {
       const image = await compressImage(file)
-      onSend({ text, image })
+      onSend({ text: currentText, image })
     } catch {
       // Fall back to the raw file if canvas compression fails
       const reader = new FileReader()
-      reader.onload = () => onSend({ text, image: reader.result as string })
+      reader.onload = () => onSend({ text: currentText, image: reader.result as string })
       reader.readAsDataURL(file)
     }
   }

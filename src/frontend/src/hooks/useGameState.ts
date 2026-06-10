@@ -19,10 +19,10 @@ export function useGameState(myPlayerId: string) {
     return ++idCounter.current
   }
 
-  const addOptimisticEntry = useCallback((text: string) => {
+  const addOptimisticEntry = useCallback((text: string, image?: string) => {
     setChatLog(prev => [...prev, {
       id: nextId(), kind: 'attack', sender: myPlayerId,
-      displayText: text, damage: 0, isNpc: false, isPending: true,
+      displayText: text, damage: 0, isNpc: false, isPending: true, image,
     }])
     setCurrentTurn('')  // lock input immediately; server will restore on attack/npc_attack message
   }, [myPlayerId])
@@ -46,7 +46,7 @@ export function useGameState(myPlayerId: string) {
             e => !(e.kind === 'attack' && e.isPending && e.sender === myPlayerId)
           )
           return [...withoutPending,
-            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false, isCrit: msg.is_crit, combo: msg.combo },
+            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false, isCrit: msg.is_crit, combo: msg.combo, image: msg.image },
             { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
           ]
         })
@@ -58,7 +58,7 @@ export function useGameState(myPlayerId: string) {
             e => !(e.kind === 'attack' && e.isPending && e.sender === msg.sender)
           )
           return [...withoutPending,
-            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false, isCrit: msg.is_crit, combo: msg.combo },
+            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false, isCrit: msg.is_crit, combo: msg.combo, image: msg.image },
             { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
           ]
         })

@@ -12,6 +12,7 @@ type AttackProps = {
   isPending?: boolean
   isCrit?: boolean
   combo?: number
+  image?: string
   myUsername: string
 }
 type RefereeProps = { kind: 'referee'; displayText: string }
@@ -34,7 +35,7 @@ function MessageBubble(props: Props) {
   }
 
   if (props.kind === 'attack') {
-    const { sender, displayText, damage, isNpc, isPending, isCrit, combo, myUsername } = props
+    const { sender, displayText, damage, isNpc, isPending, isCrit, combo, image, myUsername } = props
     const isMe = sender === myUsername
 
     const avatarChar = sender.substring(0, 1).toUpperCase()
@@ -77,6 +78,14 @@ function MessageBubble(props: Props) {
               : 'bg-[#13110e] border border-[#a88a6d]/20 text-[#fff0d4] rounded-tl-none shadow-black/20'
           }`}>
             {displayText}
+            {image && (
+              <img
+                src={image}
+                alt=""
+                className="mt-2 max-w-full rounded-lg border border-white/10 block"
+                loading="lazy"
+              />
+            )}
           </div>
 
           {/* Action/Damage indicator */}

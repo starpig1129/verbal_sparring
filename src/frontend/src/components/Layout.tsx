@@ -1,11 +1,13 @@
 // src/frontend/src/components/Layout.tsx
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 import { useAuthContext } from '../contexts/AuthContext'
 
 export default function Layout() {
   const { isAuthenticated, username, logout } = useAuthContext()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isBattlePage = location.pathname.startsWith('/battle/')
 
   function handleLogout() {
     logout()
@@ -14,7 +16,7 @@ export default function Layout() {
 
   return (
     <div className="flex flex-col min-h-screen bg-ink text-white">
-      {isAuthenticated && <Navbar username={username} onLogout={handleLogout} />}
+      {isAuthenticated && !isBattlePage && <Navbar username={username} onLogout={handleLogout} />}
       <Outlet />
     </div>
   )

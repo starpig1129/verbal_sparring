@@ -115,7 +115,7 @@ export default function BattlePage() {
   }, [lastDamageEvent, shakeControls])
 
   return (
-    <motion.div animate={shakeControls} className="flex flex-col h-screen bg-ink text-white overflow-hidden">
+    <motion.div animate={shakeControls} className="flex flex-col h-screen h-[100dvh] bg-ink text-white overflow-hidden">
       {/* Top bar */}
       <div className="bg-[#0f0e0b] border-b-2 border-[#4a3f28] flex justify-between items-center px-4 py-3 flex-shrink-0">
         <span className="font-display text-base md:text-lg text-white tracking-[2px]">唇槍<span className="text-vermillion">舌戰</span></span>

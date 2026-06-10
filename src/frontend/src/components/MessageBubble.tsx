@@ -10,6 +10,8 @@ type AttackProps = {
   damage: number
   isNpc: boolean
   isPending?: boolean
+  isCrit?: boolean
+  combo?: number
   myUsername: string
 }
 type RefereeProps = { kind: 'referee'; displayText: string }
@@ -32,7 +34,7 @@ function MessageBubble(props: Props) {
   }
 
   if (props.kind === 'attack') {
-    const { sender, displayText, damage, isNpc, isPending, myUsername } = props
+    const { sender, displayText, damage, isNpc, isPending, isCrit, combo, myUsername } = props
     const isMe = sender === myUsername
 
     const avatarChar = sender.substring(0, 1).toUpperCase()
@@ -90,6 +92,12 @@ function MessageBubble(props: Props) {
                   <span className="text-[10px] filter drop-shadow">💥</span>
                   <span className="tracking-wide">承受 <strong className="text-white font-bold font-sans text-sm ml-0.5">{damage}</strong> 點傷害</span>
                 </>
+              )}
+              {isCrit && (
+                <span className="text-red-400 font-bold tracking-wide animate-pulse">⚡暴擊</span>
+              )}
+              {(combo ?? 0) >= 2 && (
+                <span className="text-amber-400 font-bold tracking-wide">連擊×{combo}</span>
               )}
             </div>
           ) : (

@@ -8,7 +8,7 @@ export function useGameState(myPlayerId: string) {
   const [currentTurn, setCurrentTurn] = useState('')
   const [chatLog, setChatLog] = useState<ChatEntry[]>([])
   const [gameOver, setGameOver] = useState<string | null>(null)
-  const [lastDamageEvent, setLastDamageEvent] = useState<{ damage: number; id: number } | null>(null)
+  const [lastDamageEvent, setLastDamageEvent] = useState<{ damage: number; id: number; isCrit?: boolean } | null>(null)
   const [challengeDeclinedMessage, setChallengeDeclinedMessage] = useState<string | null>(null)
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null)
   const idCounter = useRef(0)
@@ -44,19 +44,19 @@ export function useGameState(myPlayerId: string) {
             e => !(e.kind === 'attack' && e.isPending && e.sender === myPlayerId)
           )
           return [...withoutPending,
-            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
+            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false, isCrit: msg.is_crit, combo: msg.combo },
             { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
           ]
         })
       } else {
         sound.playReceiveDamage()
-        setLastDamageEvent({ damage: msg.damage, id: nextId() })
+        setLastDamageEvent({ damage: msg.damage, id: nextId(), isCrit: msg.is_crit })
         setChatLog(prev => {
           const withoutPending = prev.filter(
             e => !(e.kind === 'attack' && e.isPending && e.sender === msg.sender)
           )
           return [...withoutPending,
-            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false },
+            { id: nextId(), kind: 'attack', sender: msg.sender, displayText: msg.original_text, damage: msg.damage, isNpc: false, isCrit: msg.is_crit, combo: msg.combo },
             { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
           ]
         })
@@ -70,7 +70,7 @@ export function useGameState(myPlayerId: string) {
     } else if (msg.type === 'npc_attack') {
       setHp(msg.hp_status)
       setCurrentTurn(msg.current_turn)
-      setLastDamageEvent({ damage: msg.damage, id: nextId() })
+      setLastDamageEvent({ damage: msg.damage, id: nextId(), isCrit: msg.is_crit })
       sound.playReceiveDamage()
       // Replace pending NPC bubble (from npc_typing) with final scored result
       setChatLog(prev => {
@@ -78,7 +78,7 @@ export function useGameState(myPlayerId: string) {
           e => !(e.kind === 'attack' && e.isPending && e.sender === 'NPC')
         )
         return [...withoutPending,
-          { id: nextId(), kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: msg.damage, isNpc: true },
+          { id: nextId(), kind: 'attack', sender: 'NPC', displayText: msg.npc_text, damage: msg.damage, isNpc: true, isCrit: msg.is_crit, combo: msg.combo },
           { id: nextId(), kind: 'referee', displayText: `${msg.display_text}　—　${msg.referee_comment}` },
         ]
       })
@@ -100,6 +100,11 @@ export function useGameState(myPlayerId: string) {
       setChatLog(prev => prev.filter(
         e => !(e.kind === 'attack' && e.isPending && e.sender === myPlayerId)
       ))
+    } else if (msg.type === 'turn_timeout') {
+      // Server skipped an idle player's turn — record it and resync
+      setHp(msg.hp_status)
+      setCurrentTurn(msg.current_turn)
+      setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: msg.message }])
     } else if (msg.type === 'challenge_declined') {
       setChallengeDeclinedMessage(msg.message)
     } else if (msg.type === 'player_typing') {

@@ -102,10 +102,14 @@ export default function BattlePage() {
     }
   }, [opponentName, token, myUsername, navigate])
 
-  // Screen shake on big damage
+  // Screen shake on big damage; crits hit noticeably harder
   useEffect(() => {
-    if (!lastDamageEvent || lastDamageEvent.damage < 20) return
-    shakeControls.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.4 } })
+    if (!lastDamageEvent) return
+    if (lastDamageEvent.isCrit) {
+      shakeControls.start({ x: [0, -12, 12, -9, 9, -5, 5, 0], transition: { duration: 0.55 } })
+    } else if (lastDamageEvent.damage >= 20) {
+      shakeControls.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.4 } })
+    }
   }, [lastDamageEvent, shakeControls])
 
   return (

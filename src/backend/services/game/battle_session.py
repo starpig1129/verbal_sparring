@@ -39,6 +39,33 @@ logger = logging.getLogger(__name__)
 _referee_llm = make_chat_llm("referee", settings.referee_temperature)
 _npc_llm = make_chat_llm("player", settings.player_temperature)
 
+# ── Damage bonuses ────────────────────────────────────────────────────────────
+# The referee's base verdict is 10–30; crits and combos layer on top so that
+# strong attacks feel meaningfully different (max possible: 30 + 5 + 6 = 41).
+
+CRIT_THRESHOLD = 28   # base damage at or above this is a crit
+CRIT_BONUS = 5
+COMBO_THRESHOLD = 20  # base damage at or above this keeps the streak alive
+COMBO_STEP = 2        # extra damage per streak level past the first
+COMBO_MAX_BONUS = 6
+
+
+def apply_damage_bonuses(base_damage: int, prev_streak: int) -> tuple[int, bool, int]:
+    """Layer crit and combo bonuses onto a referee verdict.
+
+    Args:
+        base_damage: Referee's clamped verdict (10–30).
+        prev_streak: The attacker's consecutive high-damage streak so far.
+
+    Returns:
+        (total_damage, is_crit, new_streak)
+    """
+    streak = prev_streak + 1 if base_damage >= COMBO_THRESHOLD else 0
+    combo_bonus = min(max(streak - 1, 0) * COMBO_STEP, COMBO_MAX_BONUS)
+    is_crit = base_damage >= CRIT_THRESHOLD
+    total = base_damage + combo_bonus + (CRIT_BONUS if is_crit else 0)
+    return total, is_crit, streak
+
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
@@ -64,14 +91,21 @@ class BattleState(TypedDict):
     attack_image: str | None
     attacker_id: str        # UUID string of the attacker
 
+    # Consecutive high-damage streak per attacker key (persists across turns)
+    combo: dict[str, int]
+
     # Referee output for the human's attack
     damage: int
+    is_crit: bool
+    combo_count: int
     ref_comment: str
     ref_display_text: str
 
     # NPC turn output (NPC matches only)
     npc_text: str
     npc_damage: int
+    npc_is_crit: bool
+    npc_combo_count: int
     npc_ref_comment: str
     npc_ref_display_text: str
 
@@ -248,8 +282,14 @@ async def _node_score_player_attack(
         round_num, recent, state.get("attack_image"),
     )
 
+    combo = dict(state.get("combo") or {})
+    total_damage, is_crit, streak = apply_damage_bonuses(
+        scored["damage"], combo.get(attacker_id, 0)
+    )
+    combo[attacker_id] = streak
+
     new_hp = dict(state["hp"])
-    new_hp[target_key] = max(0, new_hp.get(target_key, 100) - scored["damage"])
+    new_hp[target_key] = max(0, new_hp.get(target_key, 100) - total_damage)
     game_over = new_hp[target_key] <= 0
 
     # NPC fields are NOT reset here: npc_generate may run in the same
@@ -258,7 +298,10 @@ async def _node_score_player_attack(
     return {
         "hp": new_hp,
         "round_number": round_num,
-        "damage": scored["damage"],
+        "damage": total_damage,
+        "is_crit": is_crit,
+        "combo_count": streak,
+        "combo": combo,
         "ref_comment": scored["comment"],
         "ref_display_text": scored["display_text"],
         "game_over": game_over,
@@ -303,14 +346,23 @@ async def _node_npc_score(
 
     scored = await _score(npc_text, "NPC", npc_hp, player_hp, round_num, recent)
 
+    combo = dict(state.get("combo") or {})
+    total_damage, is_crit, streak = apply_damage_bonuses(
+        scored["damage"], combo.get("NPC", 0)
+    )
+    combo["NPC"] = streak
+
     new_hp = dict(state["hp"])
-    new_hp[player_id] = max(0, player_hp - scored["damage"])
+    new_hp[player_id] = max(0, player_hp - total_damage)
     game_over = new_hp[player_id] <= 0
 
     return {
         "hp": new_hp,
         "round_number": round_num,
-        "npc_damage": scored["damage"],
+        "npc_damage": total_damage,
+        "npc_is_crit": is_crit,
+        "npc_combo_count": streak,
+        "combo": combo,
         "npc_ref_comment": scored["comment"],
         "npc_ref_display_text": scored["display_text"],
         "game_over": game_over,
@@ -490,14 +542,19 @@ class BattleSession:
             "player_id": player_id,
             "player_uuid": player_uuid,
             "npc_memory": {},
+            "combo": {},
             "attack_text": "",
             "attack_image": None,
             "attacker_id": player_id,
             "damage": 0,
+            "is_crit": False,
+            "combo_count": 0,
             "ref_comment": "",
             "ref_display_text": "",
             "npc_text": "",
             "npc_damage": 0,
+            "npc_is_crit": False,
+            "npc_combo_count": 0,
             "npc_ref_comment": "",
             "npc_ref_display_text": "",
             "game_over": False,
@@ -566,8 +623,12 @@ class BattleSession:
             "attacker_id": attacker_id,
             # Per-turn resets, applied as input before the superstep so the
             # parallel branches never double-write the same key.
+            "is_crit": False,
+            "combo_count": 0,
             "npc_text": "",
             "npc_damage": 0,
+            "npc_is_crit": False,
+            "npc_combo_count": 0,
             "npc_ref_comment": "",
             "npc_ref_display_text": "",
             "game_over": False,

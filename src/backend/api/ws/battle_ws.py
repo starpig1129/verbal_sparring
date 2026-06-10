@@ -45,6 +45,63 @@ online_players: dict[str, dict] = {}
 _matchmaking_lock = asyncio.Lock()
 
 
+# PvP anti-stall: how long the current player may hold a turn. Keep in sync
+# with the frontend countdown (BattlePage TURN_SECONDS).
+TURN_TIMEOUT_SECONDS = 90
+
+# One watchdog task per match; cancelled on attack, game over, or disconnect.
+_turn_timers: dict[str, asyncio.Task] = {}
+
+
+def _cancel_turn_timer(match_id: str) -> None:
+    timer = _turn_timers.pop(match_id, None)
+    if timer:
+        timer.cancel()
+
+
+def _schedule_turn_timeout(
+    match_id: str, room: GameRoom, timeout: float = TURN_TIMEOUT_SECONDS
+) -> None:
+    """Skip the current player's turn if they idle too long (PvP only).
+
+    NPC matches are exempt — an idle player there holds no one hostage. The
+    watchdog only fires while both players are connected and the turn hasn't
+    changed since it was armed.
+    """
+    _cancel_turn_timer(match_id)
+    if room.is_npc or not room.current_turn or not room.is_full():
+        return
+    expected = room.current_turn
+
+    async def _watchdog() -> None:
+        try:
+            await asyncio.sleep(timeout)
+        except asyncio.CancelledError:
+            return
+        if (
+            rooms.get(match_id) is not room
+            or room.current_turn != expected
+            or not room.is_full()
+        ):
+            return
+        next_player = next((p for p in room.connections if p != expected), None)
+        if not next_player:
+            return
+        room.current_turn = next_player
+        logger.info(f"[WS TIMEOUT] {expected} idled too long in {match_id}; turn passes to {next_player}")
+        try:
+            await room.broadcast({
+                "type": "turn_timeout",
+                "message": f"【{expected}】猶豫太久，回合被跳過！",
+                "hp_status": room.hp,
+                "current_turn": room.current_turn,
+            })
+        finally:
+            _schedule_turn_timeout(match_id, room, timeout)
+
+    _turn_timers[match_id] = asyncio.create_task(_watchdog())
+
+
 async def _notify_player_list_changed() -> None:
     """Nudge every lobby client to refresh its player list.
 
@@ -227,6 +284,7 @@ async def _do_game_over(
     winner_uuid = attacker_player_id if winner_key == player_id else None
     logger.info(f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})")
 
+    _cancel_turn_timer(match_id)
     battle_messages = session.get_messages()
     destroy_battle_session(match_id)
 
@@ -405,6 +463,9 @@ async def battle_ws(
             }
         )
 
+        # Arm the anti-stall watchdog once a PvP room is full (no-op for NPC)
+        _schedule_turn_timeout(match_id, room)
+
         # JWT sub is the canonical UUID for DB operations
         attacker_player_id = payload["sub"]
 
@@ -474,6 +535,10 @@ async def battle_ws(
                 if not text and not image_b64:
                     continue
 
+                # A valid attack is in flight — stop the anti-stall watchdog so
+                # slow LLM scoring can't be mistaken for an idle player.
+                _cancel_turn_timer(match_id)
+
                 # Broadcast player typing/attack immediately so the opponent sees it in real-time
                 await room.broadcast({
                     "type": "player_typing",
@@ -535,6 +600,8 @@ async def battle_ws(
                                 "original_text": text,
                                 "display_text": out["ref_display_text"],
                                 "damage": out["damage"],
+                                "is_crit": out.get("is_crit", False),
+                                "combo": out.get("combo_count", 0),
                                 "referee_comment": out["ref_comment"],
                                 "hp_status": dict(room.hp),
                                 "current_turn": room.current_turn,
@@ -554,6 +621,9 @@ async def battle_ws(
                                     "type": "npc_typing",
                                     "npc_text": _npc_pending_text,
                                 })
+                            else:
+                                # PvP: the opponent's turn starts now
+                                _schedule_turn_timeout(match_id, room)
 
                         elif node_name == "npc_generate":
                             # ── NPC words ready (referee may still be scoring) ────
@@ -597,6 +667,8 @@ async def battle_ws(
                                 "npc_text": npc_text,
                                 "display_text": out["npc_ref_display_text"],
                                 "damage": out["npc_damage"],
+                                "is_crit": out.get("npc_is_crit", False),
+                                "combo": out.get("npc_combo_count", 0),
                                 "referee_comment": out["npc_ref_comment"],
                                 "hp_status": dict(room.hp),
                                 "current_turn": room.current_turn,
@@ -625,6 +697,9 @@ async def battle_ws(
         except WebSocketDisconnect:
             logger.info(f"[WS INFO] Player {player_id} disconnected from match {match_id}")
             room.disconnect(player_id)
+            # Room is no longer full — don't skip turns onto a missing player.
+            # Re-armed when the player reconnects (join broadcast path).
+            _cancel_turn_timer(match_id)
             await _notify_player_list_changed()
             if not room.connections:
                 rooms.pop(match_id, None)

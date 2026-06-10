@@ -22,7 +22,7 @@ export default function BattlePage() {
   const token: string = location.state?.token ?? ctxToken
   const myUsername: string = location.state?.myUsername ?? ctxUsername
 
-  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry, challengeDeclinedMessage, toast, clearToast, reset } = useGameState(myUsername)
+  const { hp, isMyTurn, chatLog, gameOver, lastDamageEvent, handleMessage, addOptimisticEntry, challengeDeclinedMessage, toast, clearToast, npcName, reset } = useGameState(myUsername)
   const { sendAttack, connectionState } = useWebSocket(matchId!, myUsername, token, handleMessage)
 
   // Rematches navigate to a fresh match URL — wipe the previous battle state.
@@ -79,6 +79,8 @@ export default function BattlePage() {
   const myHp = hp[myUsername] ?? 100
   const opponentEntries = Object.entries(hp).filter(([k]) => k !== myUsername)
   const [opponentName, opponentHp] = opponentEntries[0] ?? ['對手', 100]
+  // "NPC" is the internal key; players see the persona name
+  const opponentDisplayName = opponentName === 'NPC' ? npcName : String(opponentName)
   const roundCount = chatLog.filter(e => e.kind === 'attack').length
 
   // NPC rematch: the finished match stays finished — create a fresh one and
@@ -124,7 +126,7 @@ export default function BattlePage() {
       {/* HP section */}
       <div className="flex items-stretch border-b border-[#1a1610] flex-shrink-0">
         <div className="flex-1 px-4 py-3 border-r border-[#1a1610]">
-          <HPBar label={String(opponentName)} hp={Number(opponentHp)} />
+          <HPBar label={opponentDisplayName} hp={Number(opponentHp)} />
         </div>
         <div className="px-3 flex flex-col items-center justify-center bg-[#080805]">
           <span className="font-body italic text-[#1a1610] text-sm">對</span>
@@ -149,7 +151,7 @@ export default function BattlePage() {
       )}
 
       {/* Chat log */}
-      <ChatLog entries={chatLog} myUsername={myUsername} />
+      <ChatLog entries={chatLog} myUsername={myUsername} npcName={npcName} />
 
       {/* Turn indicator */}
       <TurnIndicator isMyTurn={isMyTurn} secondsLeft={turnSecondsLeft} />

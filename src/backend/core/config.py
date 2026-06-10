@@ -108,6 +108,7 @@ NPC_SYSTEM_PROMPT = _prompts_data["npc"]["system_prompt"].strip()
 NPC_GENRES = [
     {
         "key": g["key"],
+        "persona": g["persona"],
         "name": g["name"],
         "display": g["display"],
         "directive": g["directive"],

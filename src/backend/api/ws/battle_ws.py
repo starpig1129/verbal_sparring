@@ -20,6 +20,7 @@ from src.backend.services.game.battle_session import (
     create_battle_session,
     destroy_battle_session,
     get_battle_session,
+    npc_genre_for_match,
     spawn_background_task,
     style_for_round,
 )
@@ -286,6 +287,7 @@ async def _do_game_over(
     logger.info(f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})")
 
     _cancel_turn_timer(match_id)
+    npc_persona = (getattr(session, "npc_genre", {}) or {}).get("persona", "NPC")
     battle_messages = session.get_messages()
     destroy_battle_session(match_id)
 
@@ -304,7 +306,7 @@ async def _do_game_over(
         "message": (
             f"【{winner_key}】把對手噴到生活不能自理！"
             if winner_key != "NPC"
-            else "AI 裁判：就這點實力？"
+            else f"【{npc_persona}】：就這點實力？"
         ),
         "winner": winner_key,
     })
@@ -450,9 +452,13 @@ async def battle_ws(
                 "hp_snapshot": r.hp_snapshot
             })
 
+        # The NPC's persona name rides along so the client can display a
+        # character instead of the literal "NPC" key.
+        npc_genre = npc_genre_for_match(match_id) if is_npc else {}
         await websocket.send_text(json.dumps({
             "type": "history",
-            "rounds": history_rounds
+            "rounds": history_rounds,
+            "npc_name": npc_genre.get("persona") or None,
         }, ensure_ascii=False))
 
         await room.broadcast(
@@ -489,7 +495,9 @@ async def battle_ws(
         if current_style:
             announce_parts.append(f"📜 本階段裁判風格：「{current_style['name']}」")
         if session.npc_genre:
-            announce_parts.append(f"🤖 NPC 流派：「{session.npc_genre['display']}」")
+            announce_parts.append(
+                f"🤖 對手：「{session.npc_genre['persona']}」（{session.npc_genre['display']}）"
+            )
         if announce_parts:
             await room.send_to(player_id, {
                 "type": "system",

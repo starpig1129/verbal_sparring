@@ -11,6 +11,8 @@ export function useGameState(myPlayerId: string) {
   const [lastDamageEvent, setLastDamageEvent] = useState<{ damage: number; id: number; isCrit?: boolean } | null>(null)
   const [challengeDeclinedMessage, setChallengeDeclinedMessage] = useState<string | null>(null)
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null)
+  // Persona name for the NPC opponent ("NPC" stays the internal key)
+  const [npcName, setNpcName] = useState('NPC')
   const idCounter = useRef(0)
 
   function nextId() {
@@ -120,6 +122,7 @@ export function useGameState(myPlayerId: string) {
         })
       }
     } else if (msg.type === 'history') {
+      if (msg.npc_name) setNpcName(msg.npc_name)
       const restoredChatLog: ChatEntry[] = []
       msg.rounds.forEach(r => {
         const isNpc = r.attacker === 'NPC'
@@ -145,6 +148,7 @@ export function useGameState(myPlayerId: string) {
     setLastDamageEvent(null)
     setChallengeDeclinedMessage(null)
     setToast(null)
+    setNpcName('NPC')
   }, [])
 
   const clearToast = useCallback(() => setToast(null), [])
@@ -154,7 +158,7 @@ export function useGameState(myPlayerId: string) {
     isMyTurn: currentTurn === myPlayerId,
     chatLog, gameOver, lastDamageEvent,
     challengeDeclinedMessage,
-    toast, clearToast,
+    toast, clearToast, npcName,
     handleMessage, addOptimisticEntry, reset,
   }
 }

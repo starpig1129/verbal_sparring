@@ -61,6 +61,17 @@ COMBO_MAX_BONUS = 6
 STYLE_ROTATION_ROUNDS = 6
 
 
+def npc_genre_for_match(match_id: str) -> dict:
+    """Deterministically pick the NPC's fighting school for a match.
+
+    Seeded by match_id so reconnects (which rebuild the session) keep the
+    same persona instead of the NPC changing character mid-match.
+    """
+    if not NPC_GENRES:
+        return {}
+    return random.Random(f"{match_id}:genre").choice(NPC_GENRES)
+
+
 def style_for_round(style_offset: int, round_number: int) -> dict | None:
     """Return the referee persona for a 1-based round number, or None."""
     if not REFEREE_STYLES:
@@ -273,7 +284,10 @@ async def _generate_npc_attack(state: BattleState) -> str:
     genre = state.get("npc_genre") or {}
     genre_hint = ""
     if genre:
-        genre_hint = f"\nStyle: {genre['name']}. {genre['directive']}"
+        genre_hint = (
+            f"\nYou are roleplaying as 「{genre['persona']}」({genre['display']})."
+            f"\nStyle: {genre['name']}. {genre['directive']}"
+        )
 
     system_content = (
         f"{NPC_SYSTEM_PROMPT}\n"
@@ -593,12 +607,13 @@ class BattleSession:
         self._thread_id = match_id
         self._initialized = False
         self._last_messages: list[BaseMessage] = list(initial_messages) if initial_messages else []
-        # Random starting persona so consecutive matches feel different
-        self.style_offset = random.randrange(len(REFEREE_STYLES)) if REFEREE_STYLES else 0
-        # NPC picks one trained fighting school per match
-        self.npc_genre: dict = (
-            random.choice(NPC_GENRES) if (is_npc and NPC_GENRES) else {}
+        # Per-match persona/style picks are seeded by match_id so reconnects
+        # rebuild the exact same characters; rematches (new match_id) re-roll.
+        self.style_offset = (
+            random.Random(f"{match_id}:style").randrange(len(REFEREE_STYLES))
+            if REFEREE_STYLES else 0
         )
+        self.npc_genre: dict = npc_genre_for_match(match_id) if is_npc else {}
         self._initial_state: BattleState = {
             "messages": initial_messages or [],
             "hp": dict(initial_hp),

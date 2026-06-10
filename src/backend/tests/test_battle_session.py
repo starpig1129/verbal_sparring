@@ -236,6 +236,7 @@ async def test_npc_prompt_includes_trained_genre(db):
     mock_ref = _delayed_llm(REF_JSON, 0.01)
     genre = {
         "key": "relative",
+        "persona": "三姑媽",
         "name": "Holiday Relatives",
         "display": "過年親戚問候流",
         "directive": "Mock them like prying holiday relatives.",
@@ -273,3 +274,17 @@ def test_npc_genres_loaded_from_config():
         "Internet Memes", "Workplace Passive Aggressive",
         "Relationship Gaslighting", "Toxic Chicken Soup", "Holiday Relatives",
     }
+
+
+def test_npc_genre_is_stable_per_match():
+    """Genre is seeded by match_id: reconnects keep the same persona."""
+    from src.backend.services.game.battle_session import npc_genre_for_match
+
+    a1 = npc_genre_for_match("match-aaa")
+    a2 = npc_genre_for_match("match-aaa")
+    assert a1 == a2
+    assert a1.get("persona")  # every genre has a persona name
+    # Different matches can draw different schools (sanity: at least the
+    # mapping is deterministic, not constant across all ids)
+    draws = {npc_genre_for_match(f"m-{i}")["key"] for i in range(32)}
+    assert len(draws) > 1

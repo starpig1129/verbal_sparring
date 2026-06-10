@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.backend.core.config import (
     MEMORY_ANALYSIS_PROMPT,
+    NPC_FEW_SHOTS,
     NPC_GENRES,
     NPC_SYSTEM_PROMPT,
     REFEREE_FEW_SHOTS,
@@ -254,58 +255,97 @@ async def _score(
 
 # ── NPC helper ────────────────────────────────────────────────────────────────
 
-async def _generate_npc_attack(state: BattleState) -> str:
-    """Generate NPC attack using the full battle conversation as proper turns.
+def _build_npc_messages(state: BattleState) -> list:
+    """Build the full message list for the NPC LLM call.
 
-    The NPC LLM sees:
-      SystemMessage — role + current battle state
-      HumanMessage  — player's first attack
-      AIMessage     — NPC's response
-      ...  (full battle history)
-      HumanMessage  — player's latest attack  ← generates response here
+    Structure:
+      SystemMessage — role, keyword-twist rule, few-shot examples, genre,
+                      battle status (HP + situation directive), memory intel,
+                      explicit "respond to this attack" callout
+      HumanMessage / AIMessage × N — capped battle history
     """
     player_id = state["player_id"]
     npc_hp = state["hp"].get("NPC", 100)
     player_hp = state["hp"].get(player_id, 100)
+    round_num = state["round_number"] + 1
 
-    memory = state.get("npc_memory") or {}
-    memory_hint = ""
-    if memory.get("round_count", 0) > 0:
-        patterns = ", ".join(memory.get("attack_patterns", [])[:3])
-        weaknesses = ", ".join(memory.get("weaknesses", [])[:3])
-        if patterns:
-            memory_hint += f"\n[Known patterns]: {patterns}"
-        if weaknesses:
-            memory_hint += f"\n[Exploitable weaknesses]: {weaknesses}"
+    # ── Few-shot examples (keyword-twist pattern) ─────────────────────────────
+    examples_block = ""
+    if NPC_FEW_SHOTS:
+        lines = ["EXAMPLES — keyword-twist pattern (learn it, apply it every time):"]
+        for opp, resp in NPC_FEW_SHOTS:
+            lines.append(f'Opponent: 「{opp}」')
+            lines.append(f'→ 「{resp}」')
+        examples_block = "\n".join(lines)
 
-    # Activate the trained fighting school. "Style: <Name>." is the exact cue
-    # format the player LoRA saw in its training data; the directive adds
-    # extra steering on top.
+    # ── Genre / fighting school ───────────────────────────────────────────────
     genre = state.get("npc_genre") or {}
-    genre_hint = ""
+    genre_block = ""
     if genre:
-        genre_hint = (
+        genre_block = (
             f"\nYou are roleplaying as 「{genre['persona']}」({genre['display']})."
             f"\nStyle: {genre['name']}. {genre['directive']}"
         )
 
-    system_content = (
-        f"{NPC_SYSTEM_PROMPT}\n"
-        f"{genre_hint}\n"
-        f"[Round {state['round_number']} | NPC HP: {npc_hp} | Opponent HP: {player_hp}]"
-        f"{memory_hint}"
+    # ── Battle status + situation directive ───────────────────────────────────
+    if npc_hp >= player_hp + 25:
+        situation = "WINNING — be dominant and contemptuous; dismiss them like they're already finished."
+    elif player_hp >= npc_hp + 25:
+        situation = "LOSING — be furious and reckless; go for their throat before it's too late."
+    else:
+        situation = "EVEN — stay sharp and unpredictable; deny them any psychological edge."
+
+    status_block = (
+        f"[BATTLE STATUS | Round {round_num}]\n"
+        f"Your HP: {npc_hp} | Opponent HP: {player_hp}\n"
+        f"Situation: {situation}"
     )
 
-    # Cap the history sent to the LLM: the opening turns anchor the battle's
-    # tone, the recent turns carry the thread. Unbounded growth slows every
-    # round and risks pushing the system prompt out of the context window.
+    # ── Player memory intel (directive injection) ─────────────────────────────
+    memory = state.get("npc_memory") or {}
+    memory_block = ""
+    if memory.get("round_count", 0) > 0:
+        patterns = ", ".join(memory.get("attack_patterns", [])[:3])
+        weaknesses = ", ".join(memory.get("weaknesses", [])[:3])
+        if patterns or weaknesses:
+            lines = ["[Player intel from previous matches]:"]
+            if patterns:
+                lines.append(f"  - Their attack style: {patterns}")
+            if weaknesses:
+                lines.append(f"  - Exploitable weakness THIS TURN: {weaknesses}")
+                lines.append("  → Work that weakness into your response explicitly.")
+            memory_block = "\n".join(lines)
+
+    # ── Explicit keyword callout ──────────────────────────────────────────────
+    attack_text = state.get("attack_text") or ""
+    keyword_block = (
+        f'[Respond to this attack]: 「{attack_text}」\n'
+        "→ Find a specific word above to twist, mock, or throw back at them."
+    )
+
+    parts = [NPC_SYSTEM_PROMPT]
+    if examples_block:
+        parts.append(examples_block)
+    if genre_block:
+        parts.append(genre_block)
+    parts.append(status_block)
+    if memory_block:
+        parts.append(memory_block)
+    parts.append(keyword_block)
+
+    system_content = "\n\n".join(p.strip() for p in parts if p.strip())
+
+    # Cap history: first 2 turns anchor tone, last 12 carry the thread.
     history = list(state["messages"])
     if len(history) > 14:
         history = history[:2] + history[-12:]
 
-    npc_msgs: list = [SystemMessage(content=system_content)]
-    npc_msgs.extend(history)
+    return [SystemMessage(content=system_content), *history]
 
+
+async def _generate_npc_attack(state: BattleState) -> str:
+    """Generate NPC counter-attack text using the full battle conversation."""
+    npc_msgs = _build_npc_messages(state)
     try:
         response = await _npc_llm.ainvoke(npc_msgs)
         npc_text = response.content.strip()
@@ -313,7 +353,6 @@ async def _generate_npc_attack(state: BattleState) -> str:
             raise ValueError("Empty response from NPC LLM")
         return npc_text
     except Exception as e:
-        # A transient LLM outage must degrade the taunt, not abort the turn.
         logger.error(f"[NPC ERROR] LLM call failed: {e}. Using fallback taunt.")
         return fallback_taunt()
 

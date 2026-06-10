@@ -263,6 +263,85 @@ async def test_npc_prompt_includes_trained_genre(db):
     assert "prying holiday relatives" in system_msg.content
 
 
+async def test_npc_prompt_includes_battle_status_and_keyword_cue(db):
+    """Battle status block and keyword-twist callout reach the NPC system message."""
+    from src.backend.services.game import battle_session as bs
+
+    captured: list = []
+
+    async def capture(msgs):
+        captured.append(msgs)
+        msg = MagicMock()
+        msg.content = "你自己看著辦"
+        return msg
+
+    mock_npc = AsyncMock()
+    mock_npc.ainvoke.side_effect = capture
+    mock_ref = _delayed_llm(REF_JSON, 0.01)
+
+    with patch("src.backend.services.game.battle_session._referee_llm", mock_ref), \
+         patch("src.backend.services.game.battle_session._npc_llm", mock_npc):
+        session = BattleSession(
+            match_id="m-status",
+            player_id="p1",
+            player_uuid=str(uuid.uuid4()),
+            is_npc=True,
+            initial_hp={"p1": 100, "NPC": 100},
+        )
+        async for _name, _out in session.process_attack_streaming("你這個廢物", "p1", db):
+            pass
+
+    system_content = captured[0][0].content
+    # HP context and situation directive present
+    assert "BATTLE STATUS" in system_content
+    assert "Your HP:" in system_content
+    assert "Opponent HP:" in system_content
+    # Explicit keyword callout with the actual attack text
+    assert "Respond to this attack" in system_content
+    assert "你這個廢物" in system_content
+
+
+async def test_npc_prompt_memory_is_directive_when_present(db):
+    """When memory exists, the prompt explicitly tells the NPC to exploit the weakness."""
+    from src.backend.services.game import battle_session as bs
+
+    captured: list = []
+
+    async def capture(msgs):
+        captured.append(msgs)
+        msg = MagicMock()
+        msg.content = "你就這樣"
+        return msg
+
+    mock_npc = AsyncMock()
+    mock_npc.ainvoke.side_effect = capture
+    mock_ref = _delayed_llm(REF_JSON, 0.01)
+    fake_memory = {
+        "round_count": 5,
+        "attack_patterns": ["喜歡舉例"],
+        "weaknesses": ["避免直接對罵"],
+    }
+
+    mock_get_memory = AsyncMock(return_value=fake_memory)
+    with patch("src.backend.services.game.battle_session._referee_llm", mock_ref), \
+         patch("src.backend.services.game.battle_session._npc_llm", mock_npc), \
+         patch("src.backend.services.game.battle_session._get_memory", mock_get_memory):
+        session = BattleSession(
+            match_id="m-memory-directive",
+            player_id="p1",
+            player_uuid=str(uuid.uuid4()),
+            is_npc=True,
+            initial_hp={"p1": 100, "NPC": 100},
+        )
+        async for _name, _out in session.process_attack_streaming("嗆一下", "p1", db):
+            pass
+
+    system_content = captured[0][0].content
+    assert "Player intel" in system_content
+    assert "避免直接對罵" in system_content
+    assert "exploit" in system_content.lower() or "Exploit" in system_content
+
+
 def test_npc_genres_loaded_from_config():
     """All 8 trained fighting schools are available in production config."""
     from src.backend.core.config import NPC_GENRES

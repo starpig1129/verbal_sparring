@@ -1,5 +1,6 @@
 """LangGraph-based NPC agent for the verbal sparring game."""
 
+import logging
 import uuid
 from typing import TypedDict
 
@@ -10,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.backend.core.config import NPC_SYSTEM_PROMPT, make_chat_llm, settings
 from src.backend.models import NpcMemory
+
+logger = logging.getLogger(__name__)
 
 # Module-level LLM instance shared across all NPC invocations.
 _llm = make_chat_llm("player", settings.player_temperature)
@@ -179,7 +182,7 @@ async def run_npc_turn(
             raise ValueError("Empty response from NPC agent")
         return result["attack_text"]
     except Exception as e:
-        print(f"[NPC ERROR] LLM call failed: {e}. Using fallback taunt.", flush=True)
+        logger.error(f"[NPC ERROR] LLM call failed: {e}. Using fallback taunt.")
         import random
         fallbacks = [
             "就這點實力？我代碼寫得都比你好！",

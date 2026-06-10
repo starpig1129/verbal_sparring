@@ -1,5 +1,6 @@
 """LangGraph-based referee service for the verbal sparring game."""
 
+import logging
 import json
 from typing import TypedDict
 
@@ -12,6 +13,8 @@ from src.backend.core.config import (
     make_chat_llm,
     settings,
 )
+
+logger = logging.getLogger(__name__)
 
 # Module-level LLM instance shared across all referee invocations.
 _llm = make_chat_llm("referee", settings.referee_temperature)
@@ -208,7 +211,7 @@ async def run_referee(text: str, image_b64: str | None, context: dict | None = N
             "display_text": result["display_text"],
         }
     except Exception as e:
-        print(f"[REFEREE ERROR] LLM call failed: {e}. Using fallback.", flush=True)
+        logger.error(f"[REFEREE ERROR] LLM call failed: {e}. Using fallback.")
         import random
         comments = [
             "力道不夠，回去多練練！",

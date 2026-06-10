@@ -1,5 +1,6 @@
 """WebSocket endpoint for the real-time battle arena."""
 
+import logging
 import asyncio
 import json
 import uuid
@@ -23,6 +24,8 @@ from src.backend.services.game.battle_session import (
 )
 from src.backend.services.game.room import GameRoom, rooms
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # Upper bound for one client message (text + base64 image). The frontend
@@ -40,6 +43,20 @@ online_players: dict[str, dict] = {}
 # connecting simultaneously can each pick the other during an await and
 # create two matches. (Single-process assumption, like the registries above.)
 _matchmaking_lock = asyncio.Lock()
+
+
+async def _notify_player_list_changed() -> None:
+    """Nudge every lobby client to refresh its player list.
+
+    Sent whenever a player comes online, goes offline, or enters/leaves a
+    battle. Clients re-fetch via REST; slow polling remains as fallback.
+    """
+    payload = json.dumps({"type": "player_list_update"}, ensure_ascii=False)
+    for info in list(online_players.values()):
+        try:
+            await info["websocket"].send_text(payload)
+        except Exception:
+            pass
 
 
 async def _try_matchmake(
@@ -208,7 +225,7 @@ async def _do_game_over(
     """Broadcast game-over, persist result, schedule memory analysis, then reset room."""
     winner_key = out["winner"]  # URL-param player_id or "NPC"
     winner_uuid = attacker_player_id if winner_key == player_id else None
-    print(f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})", flush=True)
+    logger.info(f"[WS MATCH OVER] winner={winner_key} (uuid={winner_uuid})")
 
     battle_messages = session.get_messages()
     destroy_battle_session(match_id)
@@ -262,11 +279,11 @@ async def battle_ws(
         - ``game_over``: Match concluded; includes the winner.
         - ``turn_error``: Sent only to the player who attacked out of turn.
     """
-    print(f"[WS INFO] Player {player_id} is connecting to match {match_id}...", flush=True)
+    logger.info(f"[WS INFO] Player {player_id} is connecting to match {match_id}...")
 
     payload = decode_token(token)
     if payload.get("_error"):
-        print(f"[WS WARNING] Token validation failed for player {player_id}", flush=True)
+        logger.warning(f"[WS WARNING] Token validation failed for player {player_id}")
         await websocket.close(code=4001)
         return
 
@@ -276,12 +293,12 @@ async def battle_ws(
 
     try:
         await websocket.accept()
-        print(f"[WS INFO] WebSocket accepted for player {player_id}", flush=True)
+        logger.info(f"[WS INFO] WebSocket accepted for player {player_id}")
 
         result = await db.execute(select(Match).where(Match.id == uuid.UUID(match_id)))
         match = result.scalar_one_or_none()
         if not match or match.status == MatchStatus.finished:
-            print(f"[WS WARNING] Match {match_id} not found or already finished", flush=True)
+            logger.warning(f"[WS WARNING] Match {match_id} not found or already finished")
             await websocket.send_text(
                 json.dumps({"type": "error", "message": "對局不存在或已結束"})
             )
@@ -346,6 +363,8 @@ async def battle_ws(
             room = rooms[match_id]
 
         room.connect(player_id, websocket)
+        # Entering a battle changes this player's lobby status (對戰中)
+        await _notify_player_list_changed()
 
         if is_npc and "NPC" not in room.hp:
             room.hp["NPC"] = 100
@@ -423,12 +442,12 @@ async def battle_ws(
                     )
                     continue
 
-                print(f"[WS RECEIVED] Message from {player_id}: {raw[:200]}", flush=True)
+                logger.info(f"[WS RECEIVED] Message from {player_id}: {raw[:200]}")
 
                 try:
                     payload_data = json.loads(raw)
                 except Exception as e:
-                    print(f"[WS ERROR] Failed to parse JSON from {player_id}: {e}", flush=True)
+                    logger.error(f"[WS ERROR] Failed to parse JSON from {player_id}: {e}")
                     await room.send_to(
                         player_id,
                         {"type": "error", "message": "無效的攻擊格式 (JSON 解析失敗)"},
@@ -439,11 +458,8 @@ async def battle_ws(
                 image_b64 = payload_data.get("image")
 
                 if player_id != room.current_turn:
-                    print(
-                        f"[WS WARNING] Player {player_id} tried to attack out of turn "
-                        f"(current: {room.current_turn})",
-                        flush=True,
-                    )
+                    logger.warning(f"[WS WARNING] Player {player_id} tried to attack out of turn "
+                        f"(current: {room.current_turn})")
                     await room.send_to(
                         player_id,
                         {
@@ -466,10 +482,7 @@ async def battle_ws(
                 })
 
                 try:
-                    print(
-                        f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...",
-                        flush=True,
-                    )
+                    logger.info(f"[WS PROCESS] Player {player_id} attacking: {text[:30]}...")
 
                     session = get_battle_session(match_id)
                     if not session:
@@ -504,10 +517,8 @@ async def battle_ws(
                             if not out.get("game_over"):
                                 room.current_turn = out["current_turn"]
 
-                            print(
-                                f"[WS PROCESS] Referee: damage={out['damage']}, "
-                                f"comment={out['ref_comment']}", flush=True,
-                            )
+                            logger.info(f"[WS PROCESS] Referee: damage={out['damage']}, "
+                                f"comment={out['ref_comment']}")
 
                             await _persist_round(
                                 db, match_id, out["round_number"],
@@ -547,10 +558,7 @@ async def battle_ws(
                         elif node_name == "npc_generate":
                             # ── NPC words ready (referee may still be scoring) ────
                             _npc_pending_text = out["npc_text"]
-                            print(
-                                f"[WS PROCESS] NPC typing: {_npc_pending_text[:30]}...",
-                                flush=True,
-                            )
+                            logger.info(f"[WS PROCESS] NPC typing: {_npc_pending_text[:30]}...")
                             if _player_scored and not _round_over:
                                 # Show NPC text as a pending bubble; npc_score
                                 # follows shortly with damage + HP update.
@@ -573,10 +581,8 @@ async def battle_ws(
                             # npc_text came from npc_generate (carried via _npc_pending_text)
                             npc_text = _npc_pending_text
 
-                            print(
-                                f"[WS PROCESS] NPC scored: damage={out['npc_damage']}, "
-                                f"comment={out['npc_ref_comment']}", flush=True,
-                            )
+                            logger.info(f"[WS PROCESS] NPC scored: damage={out['npc_damage']}, "
+                                f"comment={out['npc_ref_comment']}")
 
                             await _persist_round(
                                 db, match_id, out["round_number"],
@@ -605,11 +611,8 @@ async def battle_ws(
                 except Exception as round_err:
                     import traceback
 
-                    print(
-                        f"[WS ROUND ERROR] Error processing attack round: {round_err}",
-                        flush=True,
-                    )
-                    traceback.print_exc()
+                    logger.error(f"[WS ROUND ERROR] Error processing attack round: {round_err}")
+                    logger.exception("round processing failed")
                     await room.send_to(
                         player_id,
                         {
@@ -620,11 +623,9 @@ async def battle_ws(
                     continue
 
         except WebSocketDisconnect:
-            print(
-                f"[WS INFO] Player {player_id} disconnected from match {match_id}",
-                flush=True,
-            )
+            logger.info(f"[WS INFO] Player {player_id} disconnected from match {match_id}")
             room.disconnect(player_id)
+            await _notify_player_list_changed()
             if not room.connections:
                 rooms.pop(match_id, None)
                 destroy_battle_session(match_id)
@@ -676,6 +677,7 @@ async def queue_ws(
             "websocket": websocket,
             "is_searching": is_searching_init
         }
+        await _notify_player_list_changed()
 
         if is_searching_init:
             await _try_matchmake(db, player_uuid, username, websocket)
@@ -726,7 +728,7 @@ async def queue_ws(
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        print(f"[QUEUE ERROR] {e}", flush=True)
+        logger.error(f"[QUEUE ERROR] {e}")
     finally:
         # Clean up online players
         if player_uuid in online_players:
@@ -737,4 +739,6 @@ async def queue_ws(
             active_connections_count[username] -= 1
             if active_connections_count[username] <= 0:
                 active_connections_count.pop(username, None)
+
+        await _notify_player_list_changed()
 

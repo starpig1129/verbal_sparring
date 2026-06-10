@@ -9,6 +9,7 @@ BattleState alive across multiple process_attack() calls, so:
 Call destroy_session(match_id) when the match ends to free the checkpointer.
 """
 
+import logging
 import asyncio
 import json
 from typing import Annotated, TypedDict
@@ -30,6 +31,8 @@ from src.backend.core.config import (
 )
 from src.backend.services.npc.agent import _get_memory
 from src.backend.services.referee.graph import _extract_json
+
+logger = logging.getLogger(__name__)
 
 # ── Module-level LLM instances (shared across all sessions) ───────────────────
 
@@ -351,7 +354,7 @@ def spawn_background_task(coro) -> asyncio.Task:
     def _on_done(t: asyncio.Task) -> None:
         _background_tasks.discard(t)
         if not t.cancelled() and t.exception():
-            print(f"[BG TASK ERROR] {t.exception()!r}", flush=True)
+            logger.error(f"[BG TASK ERROR] {t.exception()!r}")
 
     task.add_done_callback(_on_done)
     return task
@@ -435,10 +438,10 @@ async def analyze_and_update_player_memory(
             mem.avg_damage_recv = total / mem.round_count if mem.round_count > 0 else 0.0
 
             await db.commit()
-        print(f"[MEMORY] Updated NPC memory for player {player_id}: "
-              f"patterns={new_patterns}, weaknesses={new_weaknesses}", flush=True)
+        logger.info(f"[MEMORY] Updated NPC memory for player {player_id}: "
+              f"patterns={new_patterns}, weaknesses={new_weaknesses}")
     except Exception as e:
-        print(f"[MEMORY ERROR] Failed to analyse player memory: {e}", flush=True)
+        logger.error(f"[MEMORY ERROR] Failed to analyse player memory: {e}")
 
 
 # ── BattleSession ─────────────────────────────────────────────────────────────

@@ -87,7 +87,8 @@ export default function HomePage() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchPlayers()
-      const interval = setInterval(fetchPlayers, 10000)
+      // Slow fallback only — the queue WS pushes player_list_update on change
+      const interval = setInterval(fetchPlayers, 30000)
       return () => clearInterval(interval)
     }
   }, [isAuthenticated])
@@ -133,6 +134,8 @@ export default function HomePage() {
             challenger: data.challenger
           })
           sound.playMatchChallenge()
+        } else if (data.type === 'player_list_update') {
+          fetchPlayers()
         }
       } catch (err) {
         console.error(err)
@@ -347,7 +350,7 @@ export default function HomePage() {
         {/* List title & refresh info */}
         <div className="font-mono text-[#e2d6be] text-xs tracking-[3px] p-4 lg:py-3 font-semibold border-b border-[#3a3020]/60 flex justify-between items-center bg-[#0a0806]/50 flex-shrink-0">
           <span>在線玩家列表</span>
-          <span className="text-[9px] text-[#a88a6d] font-normal animate-pulse">每 10 秒重新整理</span>
+          <span className="text-[9px] text-[#a88a6d] font-normal animate-pulse">即時更新</span>
         </div>
 
         {/* Search */}

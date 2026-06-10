@@ -9,7 +9,7 @@ export type ServerMessage =
   | { type: 'npc_typing'; npc_text: string }
   | { type: 'npc_attack'; npc_text: string; display_text: string; damage: number; referee_comment: string; hp_status: HPMap; current_turn: string }
   | { type: 'game_over'; message: string; winner: string }
-  | { type: 'turn_error'; message: string }
+  | { type: 'turn_error'; message: string; hp_status: HPMap; current_turn: string }
   | { type: 'error'; message: string }
   | { type: 'challenge_declined'; message: string }
   | { type: 'player_typing'; sender: string; text: string }

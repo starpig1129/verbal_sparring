@@ -10,6 +10,7 @@ export function useGameState(myPlayerId: string) {
   const [gameOver, setGameOver] = useState<string | null>(null)
   const [lastDamageEvent, setLastDamageEvent] = useState<{ damage: number; id: number } | null>(null)
   const [challengeDeclinedMessage, setChallengeDeclinedMessage] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null)
   const idCounter = useRef(0)
 
   function nextId() {
@@ -88,7 +89,17 @@ export function useGameState(myPlayerId: string) {
         sound.playVictory()
       }
     } else if (msg.type === 'error') {
-      setChatLog(prev => [...prev, { id: nextId(), kind: 'system', displayText: `【系統錯誤】${msg.message}` }])
+      // Transient — shown as a toast so it doesn't pollute the battle log
+      setToast({ id: nextId(), message: msg.message })
+    } else if (msg.type === 'turn_error') {
+      setToast({ id: nextId(), message: msg.message })
+      // Resync with the server's authoritative state and drop the optimistic
+      // bubble for the rejected attack
+      setHp(msg.hp_status)
+      setCurrentTurn(msg.current_turn)
+      setChatLog(prev => prev.filter(
+        e => !(e.kind === 'attack' && e.isPending && e.sender === myPlayerId)
+      ))
     } else if (msg.type === 'challenge_declined') {
       setChallengeDeclinedMessage(msg.message)
     } else if (msg.type === 'player_typing') {
@@ -128,13 +139,17 @@ export function useGameState(myPlayerId: string) {
     setGameOver(null)
     setLastDamageEvent(null)
     setChallengeDeclinedMessage(null)
+    setToast(null)
   }, [])
+
+  const clearToast = useCallback(() => setToast(null), [])
 
   return {
     hp, currentTurn,
     isMyTurn: currentTurn === myPlayerId,
     chatLog, gameOver, lastDamageEvent,
     challengeDeclinedMessage,
+    toast, clearToast,
     handleMessage, addOptimisticEntry, reset,
   }
 }

@@ -135,6 +135,7 @@ def test_websocket_attack_reduces_hp():
             ) as ws:
                 ws.receive_text()  # consume the history message
                 ws.receive_text()  # consume the system join message
+                ws.receive_text()  # consume the referee style announcement
                 ws.send_text(json.dumps({"text": "你好遜"}))
                 msg = json.loads(ws.receive_text())
                 assert msg["type"] == "player_typing"

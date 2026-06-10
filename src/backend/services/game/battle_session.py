@@ -12,6 +12,7 @@ Call destroy_session(match_id) when the match ends to free the checkpointer.
 import logging
 import asyncio
 import json
+import random
 from typing import Annotated, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -25,6 +26,7 @@ from src.backend.core.config import (
     MEMORY_ANALYSIS_PROMPT,
     NPC_SYSTEM_PROMPT,
     REFEREE_FEW_SHOTS,
+    REFEREE_STYLES,
     REFEREE_SYSTEM_PROMPT,
     make_chat_llm,
     settings,
@@ -48,6 +50,22 @@ CRIT_BONUS = 5
 COMBO_THRESHOLD = 20  # base damage at or above this keeps the streak alive
 COMBO_STEP = 2        # extra damage per streak level past the first
 COMBO_MAX_BONUS = 6
+
+
+# ── Referee style rotation (主題回合) ─────────────────────────────────────────
+# Each match starts on a random persona and rotates every N rounds. The
+# directive only colors referee_comment / display_text via the context
+# message — the scoring rules and JSON contract are untouched.
+
+STYLE_ROTATION_ROUNDS = 6
+
+
+def style_for_round(style_offset: int, round_number: int) -> dict | None:
+    """Return the referee persona for a 1-based round number, or None."""
+    if not REFEREE_STYLES:
+        return None
+    window = max(round_number - 1, 0) // STYLE_ROTATION_ROUNDS
+    return REFEREE_STYLES[(style_offset + window) % len(REFEREE_STYLES)]
 
 
 def apply_damage_bonuses(base_damage: int, prev_streak: int) -> tuple[int, bool, int]:
@@ -94,6 +112,12 @@ class BattleState(TypedDict):
     # Consecutive high-damage streak per attacker key (persists across turns)
     combo: dict[str, int]
 
+    # Referee persona rotation: random per-match offset into REFEREE_STYLES,
+    # plus the style applied to the latest verdict and whether it just rotated.
+    style_offset: int
+    referee_style: str
+    referee_style_changed: bool
+
     # Referee output for the human's attack
     damage: int
     is_crit: bool
@@ -123,6 +147,7 @@ def _build_referee_messages(
     round_number: int,
     recent_messages: list[BaseMessage],
     image_b64: str | None = None,
+    style: dict | None = None,
 ) -> list:
     """Build referee message list.
 
@@ -144,6 +169,10 @@ def _build_referee_messages(
 
     # Append recent battle dialogue as labelled context inside one HumanMessage
     context_parts = [situation]
+    if style:
+        context_parts.append(
+            f"[Referee persona] 本回合裁判風格：「{style['name']}」。{style['directive']}"
+        )
     if recent_messages:
         context_parts.append("[Recent dialogue]:")
         for msg in recent_messages[-4:]:
@@ -184,11 +213,12 @@ async def _score(
     round_number: int,
     recent_messages: list[BaseMessage],
     image_b64: str | None = None,
+    style: dict | None = None,
 ) -> dict:
     """Invoke the referee LLM and return parsed damage / comment / display_text."""
     msgs = _build_referee_messages(
         attack_text, attacker_display, hp_attacker, hp_defender,
-        round_number, recent_messages, image_b64,
+        round_number, recent_messages, image_b64, style,
     )
     try:
         response = await _referee_llm.ainvoke(msgs)
@@ -276,10 +306,16 @@ async def _node_score_player_attack(
     # Exclude the message we just appended (last entry) from "recent" context
     recent = list(state["messages"][:-1])[-4:]
 
+    style = style_for_round(state.get("style_offset", 0), round_num)
+    prev_style = style_for_round(state.get("style_offset", 0), round_num - 1)
+    style_changed = (
+        bool(style) and round_num > 1 and prev_style["name"] != style["name"]
+    )
+
     scored = await _score(
         state["attack_text"], attacker_id,
         state["hp"].get(attacker_id, 100), state["hp"].get(target_key, 100),
-        round_num, recent, state.get("attack_image"),
+        round_num, recent, state.get("attack_image"), style,
     )
 
     combo = dict(state.get("combo") or {})
@@ -302,6 +338,8 @@ async def _node_score_player_attack(
         "is_crit": is_crit,
         "combo_count": streak,
         "combo": combo,
+        "referee_style": style["name"] if style else "",
+        "referee_style_changed": style_changed,
         "ref_comment": scored["comment"],
         "ref_display_text": scored["display_text"],
         "game_over": game_over,
@@ -344,7 +382,13 @@ async def _node_npc_score(
     # Exclude the NPC message we just appended (last entry) from referee context
     recent = list(state["messages"][:-1])[-4:]
 
-    scored = await _score(npc_text, "NPC", npc_hp, player_hp, round_num, recent)
+    style = style_for_round(state.get("style_offset", 0), round_num)
+    prev_style = style_for_round(state.get("style_offset", 0), round_num - 1)
+    style_changed = (
+        bool(style) and round_num > 1 and prev_style["name"] != style["name"]
+    )
+
+    scored = await _score(npc_text, "NPC", npc_hp, player_hp, round_num, recent, style=style)
 
     combo = dict(state.get("combo") or {})
     total_damage, is_crit, streak = apply_damage_bonuses(
@@ -363,6 +407,8 @@ async def _node_npc_score(
         "npc_is_crit": is_crit,
         "npc_combo_count": streak,
         "combo": combo,
+        "referee_style": style["name"] if style else "",
+        "referee_style_changed": style_changed,
         "npc_ref_comment": scored["comment"],
         "npc_ref_display_text": scored["display_text"],
         "game_over": game_over,
@@ -533,6 +579,8 @@ class BattleSession:
         self._thread_id = match_id
         self._initialized = False
         self._last_messages: list[BaseMessage] = list(initial_messages) if initial_messages else []
+        # Random starting persona so consecutive matches feel different
+        self.style_offset = random.randrange(len(REFEREE_STYLES)) if REFEREE_STYLES else 0
         self._initial_state: BattleState = {
             "messages": initial_messages or [],
             "hp": dict(initial_hp),
@@ -543,6 +591,9 @@ class BattleSession:
             "player_uuid": player_uuid,
             "npc_memory": {},
             "combo": {},
+            "style_offset": self.style_offset,
+            "referee_style": "",
+            "referee_style_changed": False,
             "attack_text": "",
             "attack_image": None,
             "attacker_id": player_id,
@@ -625,6 +676,7 @@ class BattleSession:
             # parallel branches never double-write the same key.
             "is_crit": False,
             "combo_count": 0,
+            "referee_style_changed": False,
             "npc_text": "",
             "npc_damage": 0,
             "npc_is_crit": False,

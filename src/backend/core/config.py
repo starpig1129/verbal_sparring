@@ -98,6 +98,11 @@ REFEREE_SYSTEM_PROMPT = _prompts_data["referee"]["system_prompt"].strip()
 REFEREE_FEW_SHOTS = [
     (shot["input"], shot["output"]) for shot in _prompts_data["referee"]["few_shots"]
 ]
+# Rotating referee personas; empty list disables style injection entirely.
+REFEREE_STYLES = [
+    {"name": s["name"], "directive": s["directive"]}
+    for s in _prompts_data["referee"].get("styles", [])
+]
 NPC_SYSTEM_PROMPT = _prompts_data["npc"]["system_prompt"].strip()
 MEMORY_ANALYSIS_PROMPT = _prompts_data["memory_analysis"]["system_prompt"].strip()
 

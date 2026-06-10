@@ -21,6 +21,7 @@ from src.backend.services.game.battle_session import (
     destroy_battle_session,
     get_battle_session,
     spawn_background_task,
+    style_for_round,
 )
 from src.backend.services.game.room import GameRoom, rooms
 
@@ -481,6 +482,16 @@ async def battle_ws(
                 initial_messages=_rebuild_initial_messages(history_rounds, is_npc),
             )
 
+        # Announce the referee persona currently in effect (主題回合)
+        current_style = style_for_round(session.style_offset, room.round_number + 1)
+        if current_style:
+            await room.send_to(player_id, {
+                "type": "system",
+                "message": f"📜 本階段裁判風格：「{current_style['name']}」",
+                "hp_status": room.hp,
+                "current_turn": room.current_turn,
+            })
+
         # Connect-phase queries are done. End the implicit read transaction so
         # this long-lived WS does not pin a pool connection while idle; all
         # in-loop DB work is commit-terminated and re-begins as needed.
@@ -593,6 +604,14 @@ async def battle_ws(
                                 bump_attacker_damage=True,
                             )
 
+                            if out.get("referee_style_changed"):
+                                await room.broadcast({
+                                    "type": "system",
+                                    "message": f"📜 裁判換上新風格：「{out['referee_style']}」",
+                                    "hp_status": dict(room.hp),
+                                    "current_turn": room.current_turn,
+                                })
+
                             # Broadcast immediately — client sees result before NPC thinks
                             await room.broadcast({
                                 "type": "attack",
@@ -660,6 +679,14 @@ async def battle_ws(
                                 out["npc_ref_display_text"], out["npc_damage"],
                                 out["npc_ref_comment"], dict(room.hp),
                             )
+
+                            if out.get("referee_style_changed"):
+                                await room.broadcast({
+                                    "type": "system",
+                                    "message": f"📜 裁判換上新風格：「{out['referee_style']}」",
+                                    "hp_status": dict(room.hp),
+                                    "current_turn": room.current_turn,
+                                })
 
                             # Replace pending NPC bubble with full result + referee banner
                             await room.broadcast({

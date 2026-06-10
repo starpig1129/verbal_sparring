@@ -10,6 +10,20 @@ referee:
     - 10-17: generic trash talk, weak effort, no creativity
 
     IMPORTANT: If the attack directly references something the opponent said earlier, add +3 to damage.
+  # Rotating referee personas (主題回合). The directive is injected into the
+  # per-attack context message — NOT the system prompt — so the JSON output
+  # contract the LoRA was tuned on stays untouched.
+  styles:
+    - name: "武俠說書人"
+      directive: "以武俠說書人的口吻寫 referee_comment 與 display_text——把嗆聲比作招式與內力，講究江湖氣與武林比喻。"
+    - name: "電競實況主播"
+      directive: "以電競實況主播的口吻寫 referee_comment 與 display_text——高亢激動、節奏快，多用賽事術語與驚呼。"
+    - name: "文言老學究"
+      directive: "以滿口之乎者也的老學究口吻寫 referee_comment 與 display_text——引經據典、文白夾雜地毒舌。"
+    - name: "饒舌歌手"
+      directive: "以饒舌歌手的口吻寫 referee_comment 與 display_text——押韻、節奏感強，像 diss track 一樣攻擊。"
+    - name: "冷面法醫"
+      directive: "以法醫驗屍報告般的口吻寫 referee_comment 與 display_text——冷靜、精準、不帶感情地解剖對手的弱點。"
   few_shots:
     - input: "[Round 1 | Player HP: 100 | Opponent HP: 100]\nScore this attack: 「我要把你打到媽都不認得」"
       output: '{"damage": 23, "referee_comment": "幼兒園嘴砲", "display_text": "你這廢物，連出生都是錯誤！"}'

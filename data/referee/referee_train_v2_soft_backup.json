@@ -1,0 +1,1442 @@
+[
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"淺薄認知難登大雅，建議你把眼鏡捐給慈善。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"假文青裝深沉，捐眼鏡不如捐你腦內的關仔嶺泥。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"視野盲點連三行字都裝不下，別妄議了。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"腦波弱到當機，硬掰連三行都塞不進，閉嘴保平安。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"閣下這般膚淺，連北投的溫泉水流都嫌您乾。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"北投溫泉再乾，也比你腦子裡的水多。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"腦內既已沙塵暴起，別拿雜訊裝深度。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"三小在演哪齣？腦內空空還硬凹深度，唬爛啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"風沙再狂，也掩不住你腦海的淺灘；頂多雜訊。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 19, \"referee_comment\": \"詩癮過頭？腦容量連蚵仔煎都裝不下，講白話啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"講得這麼深，原來是知識債主在還魂？真水。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"知識債主還魂？分明是腦內空空在充大隻！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你的腦迴太淺，連底層邏輯都摸不著。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"講得比大甲媽遶境還繞，建議去廟口吃碗蚵仔煎補腦。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你談的深淵也敢稱底層？省電吧，大人別當機硬撐。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"底層沒踩過幾回，還裝大尾勒？去喝杯珍奶降火！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"頻寬不足，難怪演算不出你的認知邊界。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"頻寬不足就別裝極客，小心腦內裝馬達！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"閉眼穿搭都比你邏輯完整，看來通識課全白修了。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"三小邏輯斷線比北捷還頻繁，這句夠毒但腦內裝豆腐！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你的腦內迴路連國道一號的交流道都還比較順暢。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"國道一號再塞好歹有導航，你這頭殼裝的怕不是麥芽糖？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"國道再堵終會分流，你的空洞卻死在腦死巷。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"梗算犀利，不過你的腦容量大概只夠停機車。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"會讓你雙眼刺痛的，是認知斷層導致的幻痛。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 14, \"referee_comment\": \"認知斷層？你腦內溝迴才是真的斷層啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你的幻痛，是底層邏輯貧瘠的必然報應。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"講得頭頭是道，實際詞窮硬拗，有夠離譜！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"別硬拗了，你腦內的邏輯連草都長不出來。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這是在演大時代？邏輯比廟口便當還爛！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"衝三小喔？沒料就閉上北七嘴滾去下水溝啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"北七嘴噴不出貨，建議去大甲媽祖遶境練肺活量。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"看三小，沒料閉北七嘴。下水溝養的狗才吠這麼凶。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"嗆聲靠吼不靠腦，北七含量嚴重過量。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"衝三小！可撥仔閉嘴，無料滾回下水溝喝尿。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"粗口當飯吃？這水準連廟口阿伯都嫌髒。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"衝三小在旋轉喔？沒料就閉嘴，北七可撥仔無三小路用！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"三小在演哪齣？沒料硬嗆，像斷線電風扇。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"衝三小欠揍？沒料別亂噴，當我塑膠喔看三小！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"滿嘴三小像電音台語，內涵比麥仔茶還淡，收聲啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"靠北三小，嘴砲長手會斷？當我塑膠喔看三小！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 16, \"referee_comment\": \"靠北三小掛嘴邊，你的腦子也是塑膠製的？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"北七三小啦，沒料還敢噴？你這可撥仔滾回下水道！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"錯字連篇還敢噴？建議去夜市跟蚵仔煎比爛。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"靠北三小當我塑膠喔，嘴砲那麼長去刷馬桶可撥仔！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 35, \"referee_comment\": \"嘴砲長得比士林夜市還繞，腦容量卻空到能養大頭蝦。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"衝三小當我廢？牙長去舔鞋墊啦北七仔滾！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"台語髒話背誦員？刀法太鈍，建議去廟口練嘴皮子。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"靠北三小！就你這可撥仔也敢裝？滾回下水溝吸屁！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"嗆聲像破喇叭，雜音多過料，建議去鼎邊趖當背景音。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"衝三小！你這北七也配開麥？閉嘴啦廢物仔。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這波嘴砲像阿公假牙，鬆垮又沒咬合力。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"看三小你這北七嘴硬喔？閉嘴滾回下水溝啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這砲火連阿公的假牙都嫌太素，直接去通馬桶吧。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"北七！嘴長墊背喔？無三小路用，滾回你的鍋啦！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 12, \"referee_comment\": \"北七亂噴像賣蚵仔煎的背經文，辣度零分還燙嘴。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"靠北三小！當我塑膠喔？可撥仔腦欠裝就閉嘴滾啦！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"嘴砲像大甲鞭炮響完就沒，真當自己是廟口大仙？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"沒那屁股少放瀉藥，北七胎廢物趕快滾下水溝！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"嘴砲像馬桶通渠，又臭又沒力道。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"笑死你一天躺床不起，還敢酸我體力？北七！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"躺平廢物還敢開麥？你的酸味連淡水河都嫌臭。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"憨慢你睡成泥還敢酸體力？魯蛇繼續躺，哭爸！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 23, \"referee_comment\": \"嘴砲比廟口大雞腿還乾，咬下去只掉渣不帶血。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"笑死，你黑眼圈掉地上還在酸？北七趕快去敷眼膜！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 22, \"referee_comment\": \"嘴砲比黑眼圈還深，北七去掛眼科看腦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"哭爸喔，你整天躺平當廢物，腦子早餿了吧？笑死。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"老派廢話像廟口阿伯罵人，刀法鈍到連蚵仔煎都煎不香\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"北七白目還嫌我？你天天癱軟喝手搖，哭爸喔！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 35, \"referee_comment\": \"梗夠台味，但像沒加冰的珍奶，甜膩不殺敵。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"手搖水灌腦養出魯蛇？打遊戲像看慢動作，憨慢笑死。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"魯蛇梗都長毛了，建議去廟口換新料再嗆。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"憨慢魯蛇本尊，腦子拿水沖過？趕快回去睡你的覺！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"腦子沖過水？這火力連北投溫泉都嫌涼！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"哭爸喔你這憨慢腦水當開水喝？趕快去補笨覺！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這句台味廢話，連大甲媽祖都嫌吵，去喝豆漿清醒！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"笑死，你睡到長菇還硬開機？北七別拖累我阿西！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 32, \"referee_comment\": \"梗老如鹹菜，酸比臭豆腐重，去喝大甲麵線補腦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"憨慢，天天躺平手生鏽啦？白目去練再出來！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"廢話連篇像電鍋煮飯，手生鏽就去磨刀，別出來丟人現眼！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"笑死你才是魯蛇！天天瞎忙像北七，哭爸喔手生去練土\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"魯蛇自嗨沒人在聽，手生練土去挖地瓜吧！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"哭爸喔北七，你才白目整天躺平當廢物手生快去練！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 19, \"referee_comment\": \"廢話連篇像個電音三少，手殘就認命吧。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"笑死，豬都嫌你吵，白目別酸了憨慢北七！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這句酸文像廟口臭豆腐，聞起來凶，吃起來淡。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"阿西，離了我誰聽你廢？快去睡你的豬覺啦！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 22, \"referee_comment\": \"離譜！這廢話連豬都嫌吵，建議去廟口賣藝。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"沒北七當狗腿，誰聽你哭爸？笑死，魯蛇豬繼續睡。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"嘴砲打輸就噴尿，建議去廟口求點腦細胞再開麥。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"急了急了，戰力5還敢開話癆？可撥洗洗睡。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"戰力五渣還裝大尾，去廟口求點清醒藥啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"破防急了！小丑竟是你，戰力5可撥速歸剛欸\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 8, \"referee_comment\": \"梗爛長菇，結尾講鬼話，當機還是腦內進水？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"打字都飛了還嘴？你的破防量已達標可撥\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 25, \"referee_comment\": \"字都打飛了還嘴砲，破防量只夠換包黑橋牌啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"鏡子自照啦？你急了，戰力負五可撥洗洗睡。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"唬爛連篇，菜到出汁還裝大尾，真係欠修理。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"歸剛欸？你這波操作真香，戰力負五可撥去重開。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"講白話文啦，戰力負五還敢嗆？去廟口算八字！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"急了？小丑竟是你自己，菜逼閉嘴洗洗睡。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 15, \"referee_comment\": \"靠北這套老梗比阿公的假牙還鬆，去補習嘴砲吧！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"急了？戰力5還敢開麥，這很超派，洗洗睡可撥。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這廢話連篇的戰力5，欠踹的機車仔啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"小丑竟是你自己，戰力五裝大尾，建議拔卡重修人類。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"五裝就敢大尾？建議去廟裡求清醒丸，別在這邊丟人現眼。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"可撥！戰力五裝神棍，建議拔頭重開機做人。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 30, \"referee_comment\": \"戰力五就敢裝大尾，建議去廟裡求個清醒丸啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"急了急了，戰力只有5還嘴強？趕快歸剛去火星。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"嘴砲連環炮，戰力五渣還裝大尾？去火星當土雞啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"小丑竟是你自己，戰力負值還開麥，趕快歸剛洗夢。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"負值開麥當KTV，真係有夠離譜，趕快歸剛洗夢啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"自己戰力負值？急癱了吧，可撥趕快洗睡。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"負值戰力還硬嗆？快去夜市吃碗大雞腿壓驚。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"87分不能再高了，洗洗睡吧你這小丑。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 14, \"referee_comment\": \"這廢招太乾，連菜市場阿伯都嫌你欠削。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"戰力5還狂？可撥啦～急了跳針超派！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"可撥亂用當犀利？這水準去夜市賣蚵仔煎還比較派。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"小丑竟是你自己？離線包還敢跳針啊廢物！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"離線包還敢裝大尾，真是有夠欠打的啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"請知悉，您的格局僅限於此。已同步至垃圾桶。感恩。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"格局大到漏風？笑死，連阿公的資源回收桶都嫌你臭。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到，以您的格局建議先降版。KPI標註：當機。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"嘴砲比伺服器穩，當機還敢裝大尾？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"辛苦了，請知悉認知已當機，建議先回鍋再對齊。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"對齊個屁！你這顆菜頭早被電鍋煮成糊了！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到，以您的格局這口鍋剛好夠您消化，辛苦了。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"格局比針孔小，還吞得下這口鍋？真係有夠離譜！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到，您這格局已達標，電台量超載，請簽核離職。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 32, \"referee_comment\": \"電台成精還敢囂張？離職單簽快點啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到，您的格局已標記為報廢件，請簽資遣下台一鞠躬。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"格局沒碎嘴先糊，三小在演勞保局廢文？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"您的產能已觸底，建議直接裁撤，別占名額啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 16, \"referee_comment\": \"廢話講得比鐵皮屋還冷，這套裁員話術拿去騙鬼啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"以您的格局，建議把腦力也一并列入優化。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 33, \"referee_comment\": \"講得像高管，腦內卻空到能跑馬，真欠踹。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到，您這波白目輸出已標記為廢案，請知悉。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"三小寫成公文？像廟口假香，點下去只冒煙不發光。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"辛苦啦！以您的格局，目標就當空氣吧。拜託請知悉。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"假精嘴砲王，目標當空氣？格局比虱目魚肚還扁！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到，已將您的格局同步至離職申請表單結案。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 40, \"referee_comment\": \"嘴砲打出一張離職單，真是有夠癈特！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"已將您的格局轉為廢檔，KPI永久歸零，請知悉。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"KPI歸零啦？閣下是來開會還是來當系統重灌的？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"請知悉，我們再對齊一下誰的績效在摸魚。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"對齊個屁，績效爛到機車行都嫌你怠速。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"辛苦啦，拿空轉當業績，您的職場哲學真夠力。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"空轉變業績？你這算盤打得比廟口大仙還響！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"收到。以您的格局，請知悉廢柴產能不配交付。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"產能廢如三腳貓，格局卻大過天頂，別裝大尾鱷魚啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，竟讓你喘個氣都像勒索。你高興就好。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"假掰懺悔沒刀鋒，台灣廟口大嬸都嫌你演太滿。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"對啊，都是我的錯。不配被你愛，你高興就好，閉嘴啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 7, \"referee_comment\": \"自虐式嘴砲？這招假掰程度連廟口大媽都嫌老套。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你要這樣想我也沒辦法，反正我早就知道你有多自私。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 19, \"referee_comment\": \"這招甩鍋術太老套，連廟口阿伯都嫌沒力，台語叫無聊透透。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，不配呼吸同個空間。你高興就好啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 10, \"referee_comment\": \"茶包味太重嗆到肺，有本事直接開罵別演戲。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯。你討拍討到卡車了？明明是你玻璃心害的。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"討拍討到卡車？你這軟爛台詞連阿公都嫌棄，三小去治癡線！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，讓你討拍討到卡車，你高興就好啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"討拍成卡車？你這戲精該去廟口領便當啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯啦，害你這麼大隻還要跟我計較。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 10, \"referee_comment\": \"假道歉真酸人，這招在萬華夜市連剉冰都嫌沒料。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你高興就好，反正我都不配得到你的在乎，真對不起。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 8, \"referee_comment\": \"自輕自賤演苦情？三小在唬爛啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，害你連愧疚都假掰到缺氧。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"戲精上身還裝深情，假掰到連大甲媽祖都翻白眼。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，我不配得到你在乎，你高興就好。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"苦肉計太油，像廟口賣慘的三流戲精附身。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"繼續演啊，反正你永遠無辜，錯的當然只有我啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 12, \"referee_comment\": \"三小在演八點檔？這套受害者話術連廟口都嫌老。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，我不配得到你在乎。你高興就好，假掰。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 10, \"referee_comment\": \"演苦情戲喔？這台词欠金剛拿去賣，白目！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"都是我的錯，非要把我逼成空氣，你要這樣想我也辦法。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 7, \"referee_comment\": \"自爆流太遜，連廟口大媽都嫌你沒力。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"對呀都是我的錯，害你連生氣都嫌麻煩，你高興就好。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 38, \"referee_comment\": \"假道歉真消音，這招軟刀子割肉夠機車。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"哭給誰看？你要這樣想我也辦法，自己腦補去。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 10, \"referee_comment\": \"講白話文啦！這招叫「擺爛式反擊」，刀鈍到長鏽。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"放輕鬆啦，反正認命才是你這輩子最溫柔的解方。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"假慈悲裝大度，認命當解藥？『假掰的軟腳仙』。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"乖啦，接納平庸才自由，反正你注定領慰問金。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"文青皮包著白目內臟，三小在演哪齣靠北戲？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"感謝現實讓你清醒，你的夢想上限早在娘胎就已寫死。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這句比廟口陳年檳榔汁還淡，三小在寫生？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"放輕鬆，你的天賦出生就結帳。認命真療癒的啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 22, \"referee_comment\": \"認命療癒？你這是在給自己的白目人生收驚啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"相信自己，反正天分註定，繼續死當也是省話啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 8, \"referee_comment\": \"把懶散包裝成哲理，這招『躺平術』真夠靠北的。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"別比較了，認清平庸才是福報，你的天花板已封頂。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 22, \"referee_comment\": \"天花板封頂？你連地下室的水管都堵死了啦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"別怕，你的夢想只是階級的養分。安心當免費螺絲吧。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"這句酸得跟廟口阿伯嗑檳榔一樣，乾癟又沒力。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"放輕鬆啦，認命才是真解脫。你生來就是當分母的。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"認命？你廟口求籤求到腦霧，真會唬爛！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"認命比較甜啦，別硬撐。繼續當分母多幸福。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"分母當成精，連廟口大媽都嫌你沒戲份。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"放輕鬆啦，平庸才是你的天命，認命就是最大的慈悲。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這碗毒雞湯太稀，連廟口大媽的電風扇都吹不散。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"放寬心啦，你根本只是分母，認命才最幸福。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 36, \"referee_comment\": \"靠北，當分母還敢放寬心？真是欠修理的憨條命！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"記得感恩啦，平庸是種美德，畢竟努力根本救不了你。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"講得這麼順口，是去廟口算命騙錢啦？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"夢想只是安慰劑，認命才是你最大的福報。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"這句認命論連廟口大媽都嫌老套，去喝杯珍奶醒腦！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"聽我的，夢想早廢了。現實愛你，專挑軟腳蝦下手啦。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 16, \"referee_comment\": \"軟腳蝦還敢裝大尾？現實踩你都嫌髒鞋，去喝麥仔茶涼涼！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"夢想只是安慰劑，認清現實，乖乖當個路人甲最療癒。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"甘願當路人甲？靠北，你的格局比廟口便當還便宜！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"隔壁阿明二胎都上國小了，你月薪幾萬？真遜！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 12, \"referee_comment\": \"三小拿阿明當遮羞布，你的腦容量是租來的？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"阿明小孩讀雙語班，你呢？結婚證拿了嗎？存款破零沒？\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 22, \"referee_comment\": \"老套三連問比廟口大媽還無聊，建議去當算盤精。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"連鄰居孫都讀雙語了，你保平安沒？還在靠爸？\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 32, \"referee_comment\": \"孫仔都雙語了，你還在靠爸當廢柴，三小愛拼才會贏？\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"嫁人沒？生啥物？薪水幾萬？人家隔壁孫都當爸了！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"查某查仔查薪水？老掉牙了啦！拿去給阿公聽就好。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"討拍喔？你連個伴都無，月薪破萬沒？人家隔壁都當爸了！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"破萬就敢開嘴？連機車行工讀生都領兩萬，你這招是出土文物。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"吵啥小三？你兒保薪多少？隔壁你孫子又留級！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 32, \"referee_comment\": \"這套廟口酸民三連發，連阿公的菸味都聞得到。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"人家阿明賺六隻貓糧養家，你呢？連房租都繳不出還問我\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"貓糧養家？笑死，你窮到出風還裝大尾，真係欠踹！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"工作呢？何時結婚？窮到繳租還嘴，阿明二胎都國小了！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 32, \"referee_comment\": \"蝦咪？這套老母級催婚論，早該進故宮當文物展出了。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"你家女婿年薪破百萬？兒女婚了沒？別拿我尬墊！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"這記反問像廟口大媽查勤，沒料只夠墊鞋底。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"搖飲料賺摳摳，有定婚生二胎領補助了嗎？\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 20, \"referee_comment\": \"補助領沒著落，先領紅牌滾去搖杯啦！囝仔\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"隔壁小孩已升主管，你搖飲料月薪幾毛？有棺材本嗎？\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"搖杯搖到腕隧道症候群，棺材本？你連棺材板都拼不起！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"別裝了！鄰居孫都升副總領百萬了，婚約咧？\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"別裝了？你這句酸話連大甲媽都嫌吵，去買張床睡！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"年薪照價稅多少？房貸幾萬？婚結了沒？別玩去生！\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 18, \"referee_comment\": \"嘴砲比手速猛，可惜只有阿母愛聽這套廢話。\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"阿嬤問你嫁人沒？隔壁仔都升二總了，你月薪破三萬沒？\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 28, \"referee_comment\": \"老套三連問？刀鈍如廟口大媽的蒲扇，欠踹！\"}"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Evaluate the following player attack:\n\"舅年薪破百萬？隔壁仔留三戶，你家只欠一堆債。\"\n\nReturn JSON only."
+      },
+      {
+        "role": "assistant",
+        "content": "{\"damage\": 31, \"referee_comment\": \"拿厝邊當尺量自己，量出滿身窮酸味。\"}"
+      }
+    ]
+  }
+]

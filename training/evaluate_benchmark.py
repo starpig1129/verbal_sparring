@@ -233,14 +233,16 @@ def evaluate_model(
 
 def generate_charts(
     base_metrics: Dict[str, float],
-    lora_metrics: Dict[str, float],
+    sft1_metrics: Dict[str, float],
+    sft2_metrics: Dict[str, float],
     output_path: str
 ) -> None:
     """Generates comparative visualization charts for evaluation metrics.
 
     Args:
         base_metrics: Computed metrics for the Base model.
-        lora_metrics: Computed metrics for the LoRA adapter model.
+        sft1_metrics: Computed metrics for the Referee SFT v1 adapter model.
+        sft2_metrics: Computed metrics for the Referee SFT v2 adapter model.
         output_path: Destination path to save the generated image file.
     """
     labels = ["JSON Validity", "Damage Correlation", "Comment Entropy", "Latency (s / 100)"]
@@ -249,27 +251,34 @@ def generate_charts(
     base_vals = [
         base_metrics["json_validity"],
         base_metrics["correlation"],
-        base_metrics["entropy"] / 10.0,  # Scale down entropy slightly for visualization comparison
+        base_metrics["entropy"] / 10.0,
         base_metrics["avg_latency"] / 1000.0
     ]
-    lora_vals = [
-        lora_metrics["json_validity"],
-        lora_metrics["correlation"],
-        lora_metrics["entropy"] / 10.0,
-        lora_metrics["avg_latency"] / 1000.0
+    sft1_vals = [
+        sft1_metrics["json_validity"],
+        sft1_metrics["correlation"],
+        sft1_metrics["entropy"] / 10.0,
+        sft1_metrics["avg_latency"] / 1000.0
+    ]
+    sft2_vals = [
+        sft2_metrics["json_validity"],
+        sft2_metrics["correlation"],
+        sft2_metrics["entropy"] / 10.0,
+        sft2_metrics["avg_latency"] / 1000.0
     ]
 
     x = np.arange(len(labels))
-    width = 0.35
+    width = 0.25
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(11, 6))
     
-    # Premium color palette matching the styling directives
-    rects1 = ax.bar(x - width/2, base_vals, width, label="Base Model (Gemma-4-E4B-it)", color="#85a1c1")
-    rects2 = ax.bar(x + width/2, lora_vals, width, label="Fine-tuned (LoRA)", color="#4a709c")
+    # Color palette matching consolidated charts
+    rects1 = ax.bar(x - width, base_vals, width, label="Base Model (Gemma-4-E4B-it)", color="#CBD5E1")
+    rects2 = ax.bar(x, sft1_vals, width, label="Referee SFT v1", color="#2DD4BF")
+    rects3 = ax.bar(x + width, sft2_vals, width, label="Referee SFT v2", color="#0D9488")
 
     ax.set_ylabel("Normalized Metric Values")
-    ax.set_title("Toxic Referee Benchmark Comparison (Pre vs Post Training)")
+    ax.set_title("Toxic Referee Benchmark Comparison (3 Versions)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
@@ -284,10 +293,11 @@ def generate_charts(
                         xy=(rect.get_x() + rect.get_width() / 2, height),
                         xytext=(0, 3),  # 3 points vertical offset
                         textcoords="offset points",
-                        ha='center', va='bottom', fontsize=9)
+                        ha='center', va='bottom', fontsize=8)
 
     autolabel(rects1)
     autolabel(rects2)
+    autolabel(rects3)
 
     fig.tight_layout()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -298,7 +308,8 @@ def generate_charts(
 
 def write_markdown_report(
     base_metrics: Dict[str, float],
-    lora_metrics: Dict[str, float],
+    sft1_metrics: Dict[str, float],
+    sft2_metrics: Dict[str, float],
     samples: List[Dict[str, Any]],
     output_path: str,
     image_rel_path: str
@@ -307,24 +318,25 @@ def write_markdown_report(
 
     Args:
         base_metrics: Base model evaluation metrics.
-        lora_metrics: LoRA adapter model evaluation metrics.
+        sft1_metrics: Referee SFT v1 model evaluation metrics.
+        sft2_metrics: Referee SFT v2 model evaluation metrics.
         samples: Examples of test predictions.
         output_path: Target path to write the markdown report.
         image_rel_path: Embedded image path in markdown.
     """
-    report = f"""# Toxic Referee Model Benchmark Report
+    report = f"""# Toxic Referee Model Benchmark Report (3 Versions)
 
-This report evaluates and compares the performance of the **Base Model (Gemma-4-E4B-it)** against the **Fine-tuned Model (LoRA Adapter)** on a verification dataset of {len(samples)} samples.
+This report evaluates and compares the performance of the **Base Model (Gemma-4-E4B-it)**, the **Referee SFT v1 Model**, and the **Referee SFT v2 Model** on a verification dataset of {len(samples)} samples.
 
 ## 1. Summary of Quantitative Metrics
 
-| Metric | Base Model (Pre-training) | Fine-tuned Model (Post-training) | Delta / Assessment |
-| :--- | :---: | :---: | :---: |
-| **JSON Validity Rate** | {base_metrics["json_validity"] * 100.0:.2f}% | {lora_metrics["json_validity"] * 100.0:.2f}% | **{lora_metrics["json_validity"] - base_metrics["json_validity"]:+.2f}** |
-| **Damage Pearson Correlation** | {base_metrics["correlation"]:.4f} | {lora_metrics["correlation"]:.4f} | **{lora_metrics["correlation"] - base_metrics["correlation"]:+.4f}** (vs 26B Teacher) |
-| **Damage MAE** | {base_metrics["mae"]:.2f} | {lora_metrics["mae"]:.2f} | **{lora_metrics["mae"] - base_metrics["mae"]:+.2f}** (Lower is better) |
-| **Shannon Entropy (Chinese Chars)** | {base_metrics["entropy"]:.4f} | {lora_metrics["entropy"]:.4f} | **{lora_metrics["entropy"] - base_metrics["entropy"]:+.2f}** (Vocabulary diversity) |
-| **Average Inference Latency** | {base_metrics["avg_latency"]:.2f} ms | {lora_metrics["avg_latency"]:.2f} ms | **{lora_metrics["avg_latency"] - base_metrics["avg_latency"]:+.2f} ms** |
+| Metric | Base Model (Pre-training) | Referee SFT v1 | Referee SFT v2 | Delta / Assessment (v2 vs v1) |
+| :--- | :---: | :---: | :---: | :---: |
+| **JSON Validity Rate** | {base_metrics["json_validity"] * 100.0:.2f}% | {sft1_metrics["json_validity"] * 100.0:.2f}% | {sft2_metrics["json_validity"] * 100.0:.2f}% | **{sft2_metrics["json_validity"] - sft1_metrics["json_validity"]:+.2f}** |
+| **Damage Pearson Correlation** | {base_metrics["correlation"]:.4f} | {sft1_metrics["correlation"]:.4f} | {sft2_metrics["correlation"]:.4f} | **{sft2_metrics["correlation"] - sft1_metrics["correlation"]:+.4f}** (vs 26B Teacher) |
+| **Damage MAE** | {base_metrics["mae"]:.2f} | {sft1_metrics["mae"]:.2f} | {sft2_metrics["mae"]:.2f} | **{sft2_metrics["mae"] - sft1_metrics["mae"]:+.2f}** (Lower is better) |
+| **Shannon Entropy (Chinese Chars)** | {base_metrics["entropy"]:.4f} | {sft1_metrics["entropy"]:.4f} | {sft2_metrics["entropy"]:.4f} | **{sft2_metrics["entropy"] - sft1_metrics["entropy"]:+.2f}** (Vocabulary diversity) |
+| **Average Inference Latency** | {base_metrics["avg_latency"]:.2f} ms | {sft1_metrics["avg_latency"]:.2f} ms | {sft2_metrics["avg_latency"]:.2f} ms | **{sft2_metrics["avg_latency"] - sft1_metrics["avg_latency"]:+.2f} ms** |
 
 ---
 
@@ -337,9 +349,9 @@ This report evaluates and compares the performance of the **Base Model (Gemma-4-
 ## 3. Analysis & Key Observations
 
 1. **JSON Formatting Stability**:
-   * The LoRA adapter ensures structural constraints. It consistently formats output strings to parsable JSON objects containing both `damage` and `referee_comment`, drastically reducing downstream crash rates in the game application.
+   * Fine-tuned adapters ensure structural constraints. Both SFT v1 and v2 referee models consistently format output strings to parsable JSON objects containing both `damage` and `referee_comment`, drastically reducing downstream crash rates in the game application.
 2. **Alignment & Correlation**:
-   * Correlation with the 26B Teacher model outputs shows a significant shift. The fine-tuned model aligns its damage assessment distribution with the dataset targets, reducing overall Mean Absolute Error (MAE).
+   * Correlation with the 26B Teacher model outputs shows a significant shift. Referee v2 aligns its damage assessment distribution with the dataset targets, reducing overall Mean Absolute Error (MAE) and improving robust evaluation.
 3. **Linguistic Diversity (Entropy)**:
    * Shannon entropy measures vocabulary dispersion. A drop in entropy indicates alignment with specific Taiwanese street slang/roasting styles, while high entropy in the base model reflects generic or random Chinese responses.
 4. **Computational Latency Overhead**:
@@ -358,8 +370,9 @@ Below is a random sample comparison of evaluations made by both models:
         report += f"### Example {idx + 1}\n"
         report += f"* **Player Attack Prompt**: `{sample['prompt']}`\n"
         report += f"* **Base Model Raw**: `{sample['base_raw']}`\n"
-        report += f"* **LoRA Model Raw**: `{sample['lora_raw']}`\n"
-        report += f"* **Ground Truth Damage**: `{sample['gt_damage']}` | **Base Pred**: `{sample['base_damage']}` | **LoRA Pred**: `{sample['lora_damage']}`\n\n"
+        report += f"* **SFT v1 Model Raw**: `{sample['sft1_raw']}`\n"
+        report += f"* **SFT v2 Model Raw**: `{sample['sft2_raw']}`\n"
+        report += f"* **Ground Truth Damage**: `{sample['gt_damage']}` | **Base Pred**: `{sample['base_damage']}` | **SFT v1**: `{sample['sft1_damage']}` | **SFT v2**: `{sample['sft2_damage']}`\n\n"
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)
@@ -369,8 +382,9 @@ Below is a random sample comparison of evaluations made by both models:
 def main() -> None:
     """Orchestrates the evaluation, chart plotting, and markdown report generation."""
     import argparse
-    parser = argparse.ArgumentParser(description="Evaluate Base vs LoRA Referee model.")
-    parser.add_argument("--adapter_path", type=str, default="./referee_lora_output/referee_agent/referee_agent", help="LoRA adapter path.")
+    parser = argparse.ArgumentParser(description="Evaluate Base vs SFT v1 vs SFT v2 Referee models.")
+    parser.add_argument("--sft_v1_adapter", type=str, default="./referee_lora_output/referee_agent/referee_agent", help="Referee SFT v1 adapter path.")
+    parser.add_argument("--sft_v2_adapter", type=str, default="./referee_lora_output/referee_agent_v2", help="Referee SFT v2 adapter path.")
     parser.add_argument("--dataset_path", type=str, default="data/referee/referee_train.json", help="Path to evaluation JSON dataset.")
     parser.add_argument("--chart_output", type=str, default="evaluation/benchmark_comparison.png", help="Path to save the evaluation comparison chart.")
     parser.add_argument("--report_output", type=str, default="evaluation/benchmark_results.md", help="Path to save the evaluation markdown report.")
@@ -388,11 +402,9 @@ def main() -> None:
         print(f"  - Current VRAM Allocated: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MiB")
     else:
         print("⚠️ WARNING: CUDA is NOT available! Running on CPU will be extremely slow.")
-        # Raise exception to prevent silent CPU run
         raise RuntimeError("CUDA is not available. Please ensure PyTorch is installed with CUDA support.")
 
     model_id = "google/gemma-4-E4B-it"
-    adapter_path = args.adapter_path
     dataset_path = args.dataset_path
     chart_output = args.chart_output
     report_output = args.report_output
@@ -418,6 +430,7 @@ def main() -> None:
     if cuda_available:
         print(f"  - GPU VRAM Post-Load: {torch.cuda.memory_allocated(0) / 1024**2:.2f} MiB")
 
+    # 1. Evaluate Base Model
     print("🏃 [3/5] Evaluating Base Model...")
     base_json_validity, base_corr, base_mae, base_ent, base_lat, base_details = evaluate_model(
         model, processor, val_dataset
@@ -429,46 +442,66 @@ def main() -> None:
         "entropy": base_ent,
         "avg_latency": base_lat
     }
-
     print(f"Base Model Results: JSON Validity={base_json_validity:.4f}, Correlation={base_corr:.4f}, MAE={base_mae:.2f}, Entropy={base_ent:.4f}, Latency={base_lat:.2f}ms")
 
-    print("⏳ [4/5] Loading LoRA Adapter weights onto the model...")
-    model = PeftModel.from_pretrained(model, adapter_path, adapter_name="referee_roast")
+    # 2. Evaluate Referee SFT v1 Model
+    print("⏳ [4/5] Loading Referee SFT v1 Adapter weights...")
+    model = PeftModel.from_pretrained(model, args.sft_v1_adapter, adapter_name="referee_sft_v1")
     model.eval()
 
-    print("🏃 [4/5] Evaluating Fine-tuned (LoRA) Model...")
-    lora_json_validity, lora_corr, lora_mae, lora_ent, lora_lat, lora_details = evaluate_model(
+    print("🏃 [4/5] Evaluating Referee SFT v1 Model...")
+    sft1_json_validity, sft1_corr, sft1_mae, sft1_ent, sft1_lat, sft1_details = evaluate_model(
         model, processor, val_dataset
     )
-    lora_metrics = {
-        "json_validity": lora_json_validity,
-        "correlation": lora_corr,
-        "mae": lora_mae,
-        "entropy": lora_ent,
-        "avg_latency": lora_lat
+    sft1_metrics = {
+        "json_validity": sft1_json_validity,
+        "correlation": sft1_corr,
+        "mae": sft1_mae,
+        "entropy": sft1_ent,
+        "avg_latency": sft1_lat
     }
+    print(f"Referee SFT v1 Results: JSON Validity={sft1_json_validity:.4f}, Correlation={sft1_corr:.4f}, MAE={sft1_mae:.2f}, Entropy={sft1_ent:.4f}, Latency={sft1_lat:.2f}ms")
 
-    print(f"LoRA Model Results: JSON Validity={lora_json_validity:.4f}, Correlation={lora_corr:.4f}, MAE={lora_mae:.2f}, Entropy={lora_ent:.4f}, Latency={lora_lat:.2f}ms")
+    # 3. Evaluate Referee SFT v2 Model
+    print("⏳ [4/5] Loading Referee SFT v2 Adapter weights...")
+    model.load_adapter(args.sft_v2_adapter, adapter_name="referee_sft_v2")
+    model.set_adapter("referee_sft_v2")
+    model.eval()
+
+    print("🏃 [4/5] Evaluating Referee SFT v2 Model...")
+    sft2_json_validity, sft2_corr, sft2_mae, sft2_ent, sft2_lat, sft2_details = evaluate_model(
+        model, processor, val_dataset
+    )
+    sft2_metrics = {
+        "json_validity": sft2_json_validity,
+        "correlation": sft2_corr,
+        "mae": sft2_mae,
+        "entropy": sft2_ent,
+        "avg_latency": sft2_lat
+    }
+    print(f"Referee SFT v2 Results: JSON Validity={sft2_json_validity:.4f}, Correlation={sft2_corr:.4f}, MAE={sft2_mae:.2f}, Entropy={sft2_ent:.4f}, Latency={sft2_lat:.2f}ms")
 
     # Merge detail lists to extract comparisons
     merged_samples = []
-    for base_det, lora_det in zip(base_details, lora_details):
+    for b_det, s1_det, s2_det in zip(base_details, sft1_details, sft2_details):
         merged_samples.append({
-            "prompt": base_det["prompt"][-60:].replace("\n", " "),
-            "base_raw": base_det["raw_output"],
-            "lora_raw": lora_det["raw_output"],
-            "gt_damage": base_det["gt_damage"],
-            "base_damage": base_det["pred_damage"],
-            "lora_damage": lora_det["pred_damage"]
+            "prompt": b_det["prompt"][-60:].replace("\n", " "),
+            "base_raw": b_det["raw_output"],
+            "sft1_raw": s1_det["raw_output"],
+            "sft2_raw": s2_det["raw_output"],
+            "gt_damage": b_det["gt_damage"],
+            "base_damage": b_det["pred_damage"],
+            "sft1_damage": s1_det["pred_damage"],
+            "sft2_damage": s2_det["pred_damage"]
         })
 
     print("📈 [5/5] Plotting charts and compiling reports...")
-    generate_charts(base_metrics, lora_metrics, chart_output)
+    generate_charts(base_metrics, sft1_metrics, sft2_metrics, chart_output)
     
-    # We embed the image in the markdown report using the filename directly since they reside in the same artifacts directory
     write_markdown_report(
         base_metrics,
-        lora_metrics,
+        sft1_metrics,
+        sft2_metrics,
         merged_samples,
         report_output,
         "benchmark_comparison.png"

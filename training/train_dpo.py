@@ -67,7 +67,7 @@ def main() -> None:
 
     print("🚀 Initializing DPO Training Pipeline...")
     model_id = "google/gemma-4-E4B-it"
-    adapter_path = "./player_lora_output/player_agent/player_agent"
+    adapter_path = "./player_lora_output/player_agent_sft_v2/player_agent_sft_v2"
 
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,

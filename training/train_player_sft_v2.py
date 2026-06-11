@@ -1,9 +1,9 @@
-# train_referee_v2.py
-"""SFT Training script for Referee v2 agent.
+# train_player_sft_v2.py
+"""SFT Training script for Player v2 agent.
 
 This script loads the base model google/gemma-4-E4B-it, sets up a clean LoRA
-configuration targeting the language model layers, and trains the referee adapter
-on the new Qwen-generated high-quality dataset (data/referee/referee_train_v2.json).
+configuration targeting the language model layers, and trains the player SFT v2
+adapter on the player conversational SFT dataset (data/player/player_train.json).
 """
 
 import argparse
@@ -51,10 +51,10 @@ def set_training_seeds(seed: int = 42) -> None:
 
 
 def main() -> None:
-    """Orchestrates SFT training pipeline for the Referee v2 adapter."""
-    parser = argparse.ArgumentParser(description="Train Referee v2 model on Qwen-distilled dataset.")
-    parser.add_argument("--dataset_path", type=str, default="data/referee/referee_train_v2.json", help="Path to Referee v2 JSON dataset.")
-    parser.add_argument("--output_dir", type=str, default="./referee_lora_output/referee_agent_v2", help="Output directory to save adapter weights.")
+    """Orchestrates SFT training pipeline for the Player v2 SFT adapter."""
+    parser = argparse.ArgumentParser(description="Train Player v2 SFT model on dataset.")
+    parser.add_argument("--dataset_path", type=str, default="data/player/player_train.json", help="Path to Player JSON dataset.")
+    parser.add_argument("--output_dir", type=str, default="./player_lora_output/player_agent_sft_v2", help="Output directory to save adapter weights.")
     parser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate for AdamW.")
     parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs.")
     parser.add_argument("--batch_size", type=int, default=2, help="Batch size per device.")
@@ -63,7 +63,7 @@ def main() -> None:
 
     set_training_seeds(TRAINING_REPRODUCIBILITY_SEED)
 
-    print("🚀 Initializing Referee v2 SFT Training Pipeline...")
+    print("🚀 Initializing Player v2 SFT Training Pipeline...")
     model_id = "google/gemma-4-E4B-it"
 
     bnb_config = BitsAndBytesConfig(
@@ -104,10 +104,9 @@ def main() -> None:
     model.print_trainable_parameters()
 
     # 3. Load SFT dataset
-    print(f"📂 Loading Referee v2 dataset from: {args.dataset_path}")
+    print(f"📖 Loading SFT dataset from {args.dataset_path}...")
     dataset = load_dataset("json", data_files={"train": args.dataset_path})
 
-    # Custom conversational formatting function using processor apply_chat_template
     def formatting_prompts_func(example):
         is_batch = False
         if "messages" in example:
@@ -115,10 +114,10 @@ def main() -> None:
                 is_batch = True
 
         def format_single_chat(messages):
-            if hasattr(processor, "tokenizer") and hasattr(processor.tokenizer, "apply_chat_template"):
-                return processor.tokenizer.apply_chat_template(messages, tokenize=False)
-            elif hasattr(processor, "apply_chat_template"):
+            if hasattr(processor, "apply_chat_template"):
                 return processor.apply_chat_template(messages, tokenize=False)
+            elif hasattr(processor, "tokenizer") and hasattr(processor.tokenizer, "apply_chat_template"):
+                return processor.tokenizer.apply_chat_template(messages, tokenize=False)
             else:
                 formatted = ""
                 for msg in messages:
@@ -130,7 +129,8 @@ def main() -> None:
         else:
             return format_single_chat(example["messages"])
 
-    # 4. Set SFTConfig / TrainingArguments
+    # 4. Instantiate SFTTrainer
+    print("⚡ Configuring SFTTrainer arguments...")
     if SFTConfig is not None:
         try:
             training_args = SFTConfig(
@@ -138,13 +138,13 @@ def main() -> None:
                 per_device_train_batch_size=args.batch_size,
                 gradient_accumulation_steps=args.gradient_accumulation_steps,
                 learning_rate=args.learning_rate,
+                num_train_epochs=args.epochs,
                 bf16=True,
                 logging_steps=10,
                 save_strategy="no",
                 optim="paged_adamw_8bit",
                 max_length=512,
-                num_train_epochs=args.epochs,
-                remove_unused_columns=False
+                report_to="none"
             )
         except TypeError:
             training_args = SFTConfig(
@@ -152,13 +152,13 @@ def main() -> None:
                 per_device_train_batch_size=args.batch_size,
                 gradient_accumulation_steps=args.gradient_accumulation_steps,
                 learning_rate=args.learning_rate,
+                num_train_epochs=args.epochs,
                 bf16=True,
                 logging_steps=10,
                 save_strategy="no",
                 optim="paged_adamw_8bit",
                 max_seq_length=512,
-                num_train_epochs=args.epochs,
-                remove_unused_columns=False
+                report_to="none"
             )
         trainer = SFTTrainer(
             model=model,
@@ -172,12 +172,12 @@ def main() -> None:
             per_device_train_batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
             learning_rate=args.learning_rate,
+            num_train_epochs=args.epochs,
             bf16=True,
             logging_steps=10,
             save_strategy="no",
             optim="paged_adamw_8bit",
-            num_train_epochs=args.epochs,
-            remove_unused_columns=False
+            report_to="none"
         )
         trainer = SFTTrainer(
             model=model,
@@ -187,14 +187,13 @@ def main() -> None:
             args=training_args
         )
 
-    # 5. Execute SFT training
-    print("🏃 Training Referee v2 adapter...")
+    print("🏋️ Starting SFT Training execution...")
     trainer.train()
 
-    # 6. Save target adapter weights
-    save_path = args.output_dir
-    model.save_pretrained(save_path)
-    print(f"🎉 Successfully trained and saved adapter to: {save_path}")
+    # Save target adapter weights
+    adapter_save_dir = os.path.join(args.output_dir, "player_agent_sft_v2")
+    model.save_pretrained(adapter_save_dir)
+    print(f"✅ [SUCCESS] Player SFT v2 trained and saved to {adapter_save_dir}")
 
 
 if __name__ == "__main__":

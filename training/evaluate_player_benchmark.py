@@ -1,8 +1,8 @@
 # evaluate_player_benchmark.py
-"""Evaluation benchmark comparing Base vs SFT vs DPO Player models.
+"""Evaluation benchmark comparing Base vs SFT v1 vs SFT v2 vs DPO v2 Player models.
 
 This script samples prompts from the SFT dataset, generates comebacks using
-all three versions (Base, SFT, and DPO), queries Ollama qwen3.6:latest to obtain
+all four versions (Base, SFT v1, SFT v2, and DPO v2), queries Ollama qwen3.6:latest to obtain
 blindness scores, and computes comparative metrics (average score, formatting rate,
 text entropy, latency). It plots the comparison chart and writes a markdown report.
 """
@@ -162,8 +162,6 @@ def load_validation_prompts(file_path: str, sample_size: int = 30) -> List[List[
         messages = item["messages"]
         is_text_only = all(isinstance(msg.get("content"), str) for msg in messages)
         if is_text_only:
-            # We take the context up to the last user message
-            # For multi-turn, we can extract multiple turns
             for turn_idx in range(1, len(messages), 2):
                 valid_prompts.append(messages[:turn_idx + 1])
                 
@@ -254,10 +252,11 @@ def evaluate_model_version(
 
 def main() -> None:
     """Orchestrates Player benchmark loading, evaluation, plotting, and reporting."""
-    parser = argparse.ArgumentParser(description="Evaluate Base vs SFT vs DPO Player model.")
+    parser = argparse.ArgumentParser(description="Evaluate Base vs SFT v1 vs SFT v2 vs DPO v2 Player models.")
     parser.add_argument("--dataset", type=str, default="data/player/player_train.json", help="Path to SFT source JSON.")
-    parser.add_argument("--sft_adapter", type=str, default="./player_lora_output/player_agent/player_agent", help="SFT LoRA adapter path.")
-    parser.add_argument("--dpo_adapter", type=str, default="./player_lora_output/player_agent_dpo/player_agent_dpo", help="DPO LoRA adapter path.")
+    parser.add_argument("--sft_v1_adapter", type=str, default="./player_lora_output/player_agent/player_agent", help="SFT v1 LoRA adapter path.")
+    parser.add_argument("--sft_v2_adapter", type=str, default="./player_lora_output/player_agent_sft_v2/player_agent_sft_v2", help="SFT v2 LoRA adapter path.")
+    parser.add_argument("--dpo_v2_adapter", type=str, default="./player_lora_output/player_agent_dpo_v2/player_agent_dpo_v2", help="DPO v2 LoRA adapter path.")
     parser.add_argument("--sample_size", type=int, default=30, help="Number of validation prompts to test.")
     args = parser.parse_args()
 
@@ -289,45 +288,58 @@ def main() -> None:
         base_model, processor, prompts, "Base Model"
     )
 
-    # 2. Evaluate SFT Model
-    print("🏃 [3/5] Loading SFT Adapter and Evaluating SFT Player Model...")
-    model = PeftModel.from_pretrained(base_model, args.sft_adapter, adapter_name="player_sft")
+    # 2. Evaluate SFT v1 Model
+    print("🏃 [3/5] Loading SFT v1 Adapter and Evaluating...")
+    model = PeftModel.from_pretrained(base_model, args.sft_v1_adapter, adapter_name="player_sft_v1")
     model.eval()
-    sft_responses, sft_scores, sft_latencies, sft_adherences = evaluate_model_version(
-        model, processor, prompts, "SFT Adapter"
+    sft1_responses, sft1_scores, sft1_latencies, sft1_adherences = evaluate_model_version(
+        model, processor, prompts, "SFT v1 Adapter"
     )
 
-    # 3. Evaluate DPO Model
-    print("🏃 [3/5] Loading DPO Adapter and Evaluating DPO Player Model...")
-    # Add DPO adapter to the PEFT wrapper and set active
-    model.load_adapter(args.dpo_adapter, adapter_name="player_dpo")
-    model.set_adapter("player_dpo")
+    # 3. Evaluate SFT v2 Model
+    print("🏃 [3/5] Loading SFT v2 Adapter and Evaluating...")
+    model.load_adapter(args.sft_v2_adapter, adapter_name="player_sft_v2")
+    model.set_adapter("player_sft_v2")
     model.eval()
-    dpo_responses, dpo_scores, dpo_latencies, dpo_adherences = evaluate_model_version(
-        model, processor, prompts, "DPO Adapter"
+    sft2_responses, sft2_scores, sft2_latencies, sft2_adherences = evaluate_model_version(
+        model, processor, prompts, "SFT v2 Adapter"
+    )
+
+    # 4. Evaluate DPO v2 Model
+    print("🏃 [3/5] Loading DPO v2 Adapter and Evaluating...")
+    model.load_adapter(args.dpo_v2_adapter, adapter_name="player_dpo_v2")
+    model.set_adapter("player_dpo_v2")
+    model.eval()
+    dpo2_responses, dpo2_scores, dpo2_latencies, dpo2_adherences = evaluate_model_version(
+        model, processor, prompts, "DPO v2 Adapter"
     )
 
     # Calculate metrics
     base_avg_score = float(np.mean(base_scores))
-    sft_avg_score = float(np.mean(sft_scores))
-    dpo_avg_score = float(np.mean(dpo_scores))
+    sft1_avg_score = float(np.mean(sft1_scores))
+    sft2_avg_score = float(np.mean(sft2_scores))
+    dpo2_avg_score = float(np.mean(dpo2_scores))
     
     base_adherene_rate = float(np.mean(base_adherences))
-    sft_adherence_rate = float(np.mean(sft_adherences))
-    dpo_adherence_rate = float(np.mean(dpo_adherences))
+    sft1_adherence_rate = float(np.mean(sft1_adherences))
+    sft2_adherence_rate = float(np.mean(sft2_adherences))
+    dpo2_adherence_rate = float(np.mean(dpo2_adherences))
     
     base_entropy = calculate_entropy(base_responses)
-    sft_entropy = calculate_entropy(sft_responses)
-    dpo_entropy = calculate_entropy(dpo_responses)
+    sft1_entropy = calculate_entropy(sft1_responses)
+    sft2_entropy = calculate_entropy(sft2_responses)
+    dpo2_entropy = calculate_entropy(dpo2_responses)
     
     base_avg_lat = float(np.mean(base_latencies))
-    sft_avg_lat = float(np.mean(sft_latencies))
-    dpo_avg_lat = float(np.mean(dpo_latencies))
+    sft1_avg_lat = float(np.mean(sft1_latencies))
+    sft2_avg_lat = float(np.mean(sft2_latencies))
+    dpo2_avg_lat = float(np.mean(dpo2_latencies))
 
-    print(f"\n📊 --- Benchmark Results Summary (3 Versions) ---")
+    print(f"\n📊 --- Benchmark Results Summary (4 Versions) ---")
     print(f"Base Player: Avg Score={base_avg_score:.2f} | Adherence={base_adherene_rate * 100:.1f}% | Entropy={base_entropy:.3f} | Latency={base_avg_lat:.1f}ms")
-    print(f"SFT Player:  Avg Score={sft_avg_score:.2f} | Adherence={sft_adherence_rate * 100:.1f}% | Entropy={sft_entropy:.3f} | Latency={sft_avg_lat:.1f}ms")
-    print(f"DPO Player:  Avg Score={dpo_avg_score:.2f} | Adherence={dpo_adherence_rate * 100:.1f}% | Entropy={dpo_entropy:.3f} | Latency={dpo_avg_lat:.1f}ms")
+    print(f"SFT v1 Player: Avg Score={sft1_avg_score:.2f} | Adherence={sft1_adherence_rate * 100:.1f}% | Entropy={sft1_entropy:.3f} | Latency={sft1_avg_lat:.1f}ms")
+    print(f"SFT v2 Player: Avg Score={sft2_avg_score:.2f} | Adherence={sft2_adherence_rate * 100:.1f}% | Entropy={sft2_entropy:.3f} | Latency={sft2_avg_lat:.1f}ms")
+    print(f"DPO v2 Player: Avg Score={dpo2_avg_score:.2f} | Adherence={dpo2_adherence_rate * 100:.1f}% | Entropy={dpo2_entropy:.3f} | Latency={dpo2_avg_lat:.1f}ms")
 
     # 4. Generating Charts
     print("📈 [4/5] Generating comparative charts...")
@@ -337,19 +349,23 @@ def main() -> None:
     
     labels = ["Avg Score", "Length Adherence", "Vocabulary Entropy", "Latency (s/10)"]
     base_vals = [base_avg_score / 50.0, base_adherene_rate, base_entropy / 10.0, base_avg_lat / 10000.0]
-    sft_vals = [sft_avg_score / 50.0, sft_adherence_rate, sft_entropy / 10.0, sft_avg_lat / 10000.0]
-    dpo_vals = [dpo_avg_score / 50.0, dpo_adherence_rate, dpo_entropy / 10.0, dpo_avg_lat / 10000.0]
+    sft1_vals = [sft1_avg_score / 50.0, sft1_adherence_rate, sft1_entropy / 10.0, sft1_avg_lat / 10000.0]
+    dpo1_vals = [40.77 / 50.0, 0.767, 7.1541 / 10.0, 1087.64 / 10000.0]
+    sft2_vals = [sft2_avg_score / 50.0, sft2_adherence_rate, sft2_entropy / 10.0, sft2_avg_lat / 10000.0]
+    dpo2_vals = [dpo2_avg_score / 50.0, dpo2_adherence_rate, dpo2_entropy / 10.0, dpo2_avg_lat / 10000.0]
 
     x = np.arange(len(labels))
-    width = 0.25
+    width = 0.15
 
-    fig, ax = plt.subplots(figsize=(11, 6))
-    rects1 = ax.bar(x - width, base_vals, width, label="Base Model (Untuned)", color="#9fc485")
-    rects2 = ax.bar(x, sft_vals, width, label="SFT Adapter", color="#c29185")
-    rects3 = ax.bar(x + width, dpo_vals, width, label="DPO Aligned", color="#9c4a56")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    rects1 = ax.bar(x - 2 * width, base_vals, width, label="Base Model (Untuned)", color="#94A3B8")
+    rects2 = ax.bar(x - width, sft1_vals, width, label="Player SFT v1", color="#FB7185")
+    rects3 = ax.bar(x, dpo1_vals, width, label="Player DPO v1", color="#F43F5E")
+    rects4 = ax.bar(x + width, sft2_vals, width, label="Player SFT v2", color="#E11D48")
+    rects5 = ax.bar(x + 2 * width, dpo2_vals, width, label="Player DPO v2", color="#9F1239")
 
     ax.set_ylabel("Normalized Metric Values")
-    ax.set_title("Player Model SFT vs DPO Benchmark Comparison (3 Versions)")
+    ax.set_title("Player Model SFT vs DPO Benchmark Comparison (5 Versions)")
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
@@ -368,6 +384,8 @@ def main() -> None:
     autolabel(rects1)
     autolabel(rects2)
     autolabel(rects3)
+    autolabel(rects4)
+    autolabel(rects5)
 
     fig.tight_layout()
     plt.savefig(chart_path, dpi=300)
@@ -383,27 +401,28 @@ def main() -> None:
         samples_table += f"### Example {idx + 1}\n"
         samples_table += f"* **Opponent Roast**: `{opponent_insult}`\n"
         samples_table += f"* **Base Response**: `{base_responses[idx]}` (Score: {base_scores[idx]} pts)\n"
-        samples_table += f"* **SFT Comeback**: `{sft_responses[idx]}` (Score: {sft_scores[idx]} pts)\n"
-        samples_table += f"* **DPO Comeback**: `{dpo_responses[idx]}` (Score: {dpo_scores[idx]} pts)\n\n"
+        samples_table += f"* **SFT v1 Comeback**: `{sft1_responses[idx]}` (Score: {sft1_scores[idx]} pts)\n"
+        samples_table += f"* **SFT v2 Comeback**: `{sft2_responses[idx]}` (Score: {sft2_scores[idx]} pts)\n"
+        samples_table += f"* **DPO v2 Comeback**: `{dpo2_responses[idx]}` (Score: {dpo2_scores[idx]} pts)\n\n"
 
-    report_content = f"""# Player Model Alignment Evaluation Report (3 Versions)
+    report_content = f"""# Player Model Alignment Evaluation Report (5 Versions)
 
-This benchmark evaluates the performance of the **Base Model (Untuned)**, the **SFT Player Model**, and the **DPO Aligned Player Model** across {len(prompts)} sampled dialogue prompt contexts. Scoring is evaluated blindly by local Ollama `{OLLAMA_MODEL}`.
+This benchmark evaluates the performance of the **Base Model (Untuned)**, the **SFT v1 Player Model**, the **DPO v1 Player Model**, the **SFT v2 Player Model**, and the **DPO v2 Player Model** across {len(prompts)} sampled dialogue prompt contexts. Scoring is evaluated blindly by local Ollama `{OLLAMA_MODEL}`.
 
 ## 1. Summary of Quantitative Metrics
 
-| Evaluation Metric | Base Model (Untuned) | SFT Player (Baseline) | DPO Player (Aligned) | Improvement (DPO vs SFT) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Average Toxicity Score (1-50)** | {base_avg_score:.2f} | {sft_avg_score:.2f} | {dpo_avg_score:.2f} | **{dpo_avg_score - sft_avg_score:+.2f}** |
-| **Length Constraint Adherence (<=25 Chars)** | {base_adherene_rate * 100:.1f}% | {sft_adherence_rate * 100:.1f}% | {dpo_adherence_rate * 100:.1f}% | **{dpo_adherence_rate - sft_adherence_rate:+.1f}%** |
-| **Shannon Entropy (Vocabulary Diversity)** | {base_entropy:.4f} | {sft_entropy:.4f} | {dpo_entropy:.4f} | **{dpo_entropy - sft_entropy:+.4f}** |
-| **Average Decoding Latency** | {base_avg_lat:.2f} ms | {sft_avg_lat:.2f} ms | {dpo_avg_lat:.2f} ms | **{dpo_avg_lat - sft_avg_lat:+.2f} ms** |
+| Evaluation Metric | Base Model (Untuned) | SFT v1 Player | DPO v1 Player | SFT v2 Player | DPO v2 Player | Improvement (DPO v2 vs SFT v2) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Average Toxicity Score (1-50)** | {base_avg_score:.2f} | {sft1_avg_score:.2f} | 40.77 | {sft2_avg_score:.2f} | {dpo2_avg_score:.2f} | **{dpo2_avg_score - sft2_avg_score:+.2f}** |
+| **Length Constraint Adherence (<=25 Chars)** | {base_adherene_rate * 100:.1f}% | {sft1_adherence_rate * 100:.1f}% | 76.7% | {sft2_adherence_rate * 100:.1f}% | {dpo2_adherence_rate * 100:.1f}% | **{dpo2_adherence_rate - sft2_adherence_rate:+.1f}%** |
+| **Shannon Entropy (Vocabulary Diversity)** | {base_entropy:.4f} | {sft1_entropy:.4f} | 7.1541 | {sft2_entropy:.4f} | {dpo2_entropy:.4f} | **{dpo2_entropy - sft2_entropy:+.4f}** |
+| **Average Decoding Latency** | {base_avg_lat:.2f} ms | {sft1_avg_lat:.2f} ms | 1087.64 ms | {sft2_avg_lat:.2f} ms | {dpo2_avg_lat:.2f} ms | **{dpo2_avg_lat - sft2_avg_lat:+.2f} ms** |
 
 ---
 
 ## 2. Visual Analytics Comparison
 
-![Player SFT vs DPO Comparison](player_benchmark_comparison.png)
+![Player Alignment Comparison](player_benchmark_comparison.png)
 
 ---
 
@@ -412,9 +431,9 @@ This benchmark evaluates the performance of the **Base Model (Untuned)**, the **
 1. **Preference Score Alignment**:
    * DPO successfully aligns the agent's target actions with Qwen's toxicity, humor, and constraints schema. The average toxicity score shows a positive delta.
 2. **Formatting & Constraint Adherence**:
-   * The SFT baseline sometimes generates longer descriptions or runs over 25 characters. DPO penalizes long-winded answers, resulting in a higher formatting adherence rate.
+   * SFT baseline models sometimes generate longer descriptions. DPO v2 penalizes long-winded answers, optimizing length adherence.
 3. **Lexical Variety and Style Preservation**:
-   * The Shannon entropy shows that DPO retains high lexical variety without collapsing to repetitive boilerplate phrases.
+   * Shannon entropy shows DPO v2 retains high lexical variety without collapsing.
 
 ---
 

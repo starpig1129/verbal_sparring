@@ -99,13 +99,13 @@ def draw_arrow(x1: int, y1: int, x2: int, y2: int, label: str = "", arrow_color:
     ay1 = y2 - arrow_len * math.sin(angle - arrow_angle)
     ax2 = x2 - arrow_len * math.cos(angle + arrow_angle)
     ay2 = y2 - arrow_len * math.sin(angle + arrow_angle)
-
+ 
     label_xml = ""
     if label:
         mx = (x1 + x2) / 2
         my = (y1 + y2) / 2 - 12
         label_xml = f'<text x="{mx}" y="{my}" fill="{THEME["text_muted"]}" font-size="16" font-weight="600" text-anchor="middle" {SVG_FONT_FAMILY}>{label}</text>'
-
+ 
     return f"""
   <g>
     <!-- Arrow shaft -->
@@ -378,9 +378,9 @@ def render_slide_6() -> str:
     xml += f'<text x="160" y="635" fill="{THEME["text_main"]}" font-size="16" font-family="monospace">「好啦都是我的錯，你要這樣想我也沒辦法。」 (12 pts)</text>'
 
     # Summary metrics (Big Stats)
-    xml += draw_bullet(130, 700, "1. 毒舌攻擊點數暴增 (+5.17)：", "平均毒舌分由 SFT 34.97 提升至 DPO 40.13。")
-    xml += draw_bullet(130, 770, "2. 物理字數強大約束：", "對長回覆施加 penalty，提升長度限制遵循率。")
-    xml += draw_bullet(130, 840, "3. 保持詞彙多樣度 (Entropy)：", "香農熵微增 (7.17)，無發生模式崩塌 (Mode Collapse)。")
+    xml += draw_bullet(130, 700, "1. 毒舌攻擊點數暴增 (+6.54)：", "平均毒舌分由 SFT 34.23 提升至 DPO 40.77。")
+    xml += draw_bullet(130, 770, "2. 物理字數強大約束：", "對長回覆施加 penalty，提升長度限制遵循率 (76.7%)。")
+    xml += draw_bullet(130, 840, "3. 保持詞彙多樣度 (Entropy)：", "香農熵微增 (7.154)，無發生模式崩塌 (Mode Collapse)。")
 
     # Right Column: Embedded Matplotlib Chart (REAL EVALUATION CHART)
     xml += draw_card(890, 240, 950, 680, "SFT vs DPO 評測指標橫向對比圖表", THEME["accent_green"])
@@ -393,32 +393,207 @@ def render_slide_6() -> str:
 
 
 # ==============================================================================
-# Slide 7: Referee SFT & A/B Evaluation (MINIMALIST WITH EMBEDDED CHART)
+# Slide 7: Referee SFT & A/B Evaluation (CONSOLIDATED DASHBOARD VER.)
 # ==============================================================================
+def parse_player_metrics_for_slides(filepath: str) -> Dict[str, List[str]] | None:
+    """Parses player metrics to format strings dynamically for slides."""
+    if not os.path.exists(filepath):
+        return None
+    try:
+        metrics = {}
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.startswith("|"):
+                    continue
+                parts = [p.strip() for p in line.split("|")]
+                if len(parts) < 8:
+                    continue
+                metric_name = parts[1].lower()
+                if "average toxicity score" in metric_name:
+                    metrics["toxicity"] = [parts[2], parts[3], parts[4], parts[5], parts[6]]
+                elif "length constraint adherence" in metric_name:
+                    metrics["adherence"] = [parts[2], parts[3], parts[4], parts[5], parts[6]]
+                elif "shannon entropy" in metric_name:
+                    def fmt_ent(val_str: str) -> str:
+                        try:
+                            return f"{float(val_str):.3f}"
+                        except ValueError:
+                            return val_str
+                    metrics["entropy"] = [fmt_ent(parts[2]), fmt_ent(parts[3]), fmt_ent(parts[4]), fmt_ent(parts[5]), fmt_ent(parts[6])]
+                elif "average decoding latency" in metric_name:
+                    def fmt_lat(val_str: str) -> str:
+                        val_cleaned = val_str.replace("ms", "").replace("s", "").strip()
+                        try:
+                            return f"{float(val_cleaned):.1f} ms"
+                        except ValueError:
+                            return val_str
+                    metrics["latency"] = [fmt_lat(parts[2]), fmt_lat(parts[3]), fmt_lat(parts[4]), fmt_lat(parts[5]), fmt_lat(parts[6])]
+        if len(metrics) == 4:
+            return metrics
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to parse player metrics for slides: {e}")
+    return None
+
+
+def parse_referee_metrics_for_slides(filepath: str) -> Dict[str, List[str]] | None:
+    """Parses referee metrics to format strings dynamically for slides."""
+    if not os.path.exists(filepath):
+        return None
+    try:
+        metrics = {}
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.startswith("|"):
+                    continue
+                parts = [p.strip() for p in line.split("|")]
+                if len(parts) < 4:
+                    continue
+                metric_name = parts[1].lower()
+                if "json validity rate" in metric_name:
+                    metrics["json_validity"] = [parts[2], parts[3]]
+                elif "damage pearson correlation" in metric_name:
+                    def fmt_pearson(val_str: str) -> str:
+                        try:
+                            return f"{float(val_str):.4f}"
+                        except ValueError:
+                            return val_str
+                    metrics["pearson"] = [fmt_pearson(parts[2]), fmt_pearson(parts[3])]
+                elif "shannon entropy" in metric_name:
+                    def fmt_ent(val_str: str) -> str:
+                        try:
+                            return f"{float(val_str):.3f}"
+                        except ValueError:
+                            return val_str
+                    metrics["entropy"] = [fmt_ent(parts[2]), fmt_ent(parts[3])]
+                elif "average inference latency" in metric_name:
+                    def fmt_lat(val_str: str) -> str:
+                        val_cleaned = val_str.replace("ms", "").replace("s", "").strip()
+                        try:
+                            return f"{float(val_cleaned):.1f} ms"
+                        except ValueError:
+                            return val_str
+                    metrics["latency"] = [fmt_lat(parts[2]), fmt_lat(parts[3])]
+        if len(metrics) == 4:
+            return metrics
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to parse referee metrics for slides: {e}")
+    return None
+
+
 def render_slide_7() -> str:
-    xml = svg_header("裁判微調 SFT v2 與基準評測", 7)
+    xml = svg_header("對抗對齊雙重評測與圖表對比", 7)
     
-    # Left Column: Configuration (Minimal text)
-    xml += draw_card(80, 240, 780, 680, "裁判微調配置與學術設計", THEME["accent_blue"])
-    xml += draw_bullet(130, 360, "1. 訓練流派對抗更新 (SFT v2)：", "使用 DPO Player 對抗產出攻防")
-    xml += f'<text x="160" y="395" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>日誌，交由 Qwen 27B 重新打分，產出高品質裁判蒸餾集。</text>'
+    # Large Card (Consolidated Dashboard)
+    xml += draw_card(80, 240, 1760, 720, "對決玩家 (DPO) 與對戰裁判 (SFT) 雙重指標與整合圖表", THEME["accent_green"])
     
-    xml += draw_bullet(130, 465, "2. 為什麼裁判不適合 DPO：", "裁判本質是「打分與評語生成」回歸任務。")
-    xml += f'<text x="160" y="500" fill="{THEME["text_muted"]}" font-size="18" {SVG_FONT_FAMILY}>對其進行 DPO 會導致給分「收縮偏極化」，且 JSON 格式損壞。</text>'
+    # Fallback Values
+    p_tox = ["34.17", "34.23", "40.77", "34.23", "40.77"]
+    p_adh = ["96.7%", "96.7%", "76.7%", "96.7%", "76.7%"]
+    p_ent = ["6.969", "7.081", "7.154", "7.081", "7.154"]
+    p_lat = ["539.7 ms", "939.4 ms", "1087.6 ms", "939.4 ms", "1087.6 ms"]
+    
+    r_val = ["0.00%", "100.00%"]
+    r_pea = ["0.0000", "0.2409"]
+    r_ent = ["0.000", "7.237"]
+    r_lat = ["1644.6 ms", "1208.5 ms"]
+    
+    # Try dynamic parsing
+    parsed_player = parse_player_metrics_for_slides("./evaluation/player_benchmark_results.md")
+    if parsed_player is not None:
+        print("📥 Dynamically parsed Player metrics for Slide 7.")
+        p_tox = parsed_player["toxicity"]
+        p_adh = parsed_player["adherence"]
+        p_ent = parsed_player["entropy"]
+        p_lat = parsed_player["latency"]
+        
+    parsed_ref = parse_referee_metrics_for_slides("./evaluation/benchmark_results.md")
+    if parsed_ref is not None:
+        print("📥 Dynamically parsed Referee metrics for Slide 7.")
+        r_val_base, r_val_sft2 = parsed_ref["json_validity"]
+        r_pea_base, r_pea_sft2 = parsed_ref["pearson"]
+        r_ent_base, r_ent_sft2 = parsed_ref["entropy"]
+        r_lat_base, r_lat_sft2 = parsed_ref["latency"]
+        
+        r_val = [r_val_base, r_val_sft2]
+        r_pea = [r_pea_base, r_pea_sft2]
+        r_ent = [r_ent_base, r_ent_sft2]
+        r_lat = [r_lat_base, r_lat_sft2]
+    
+    # SFT v1 historical values for Referee
+    r_sft1_val = "100.00%"
+    r_sft1_pea = "0.3988"
+    r_sft1_ent = "6.361"
+    r_sft1_lat = "1348.5 ms"
 
-    xml += f'<rect x="130" y="550" width="700" height="320" fill="#EFF6FF" rx="10" />'
-    xml += f'<text x="160" y="600" fill="{THEME["text_main"]}" font-size="20" font-weight="700" {SVG_FONT_FAMILY}>微調後實測指標 (A/B Test 成果)：</text>'
-    xml += draw_bullet(160, 660, "- JSON Validity (格式遵循率)：", "0.00%  =>  100.00% (系統防護網)", THEME["accent_green"])
-    xml += draw_bullet(160, 720, "- Inference Latency (平均延遲)：", "3143ms  =>  1348ms (降幅 57%)", THEME["accent_green"])
-    xml += draw_bullet(160, 780, "- Pearson Correlation (與導師相關)：", "0.0000  =>  0.3988 (語意對齊)", THEME["accent_green"])
-    xml += draw_bullet(160, 840, "- Damage MAE (平均絕對誤差)：", "8.38 pts  =>  21.54 pts (分布貼合)", THEME["accent_green"])
-
-    # Right Column: Embedded Matplotlib Chart (REAL REFEREE CHART)
-    xml += draw_card(890, 240, 950, 680, "裁判微調前後指標對比圖表", THEME["accent_green"])
-    # Embed the referee benchmark comparison chart
-    # Path is relative (./evaluation/slides/ -> ./docs/evaluation/benchmark_comparison.png)
-    xml += f'<image x="930" y="330" width="870" height="540" href="../../docs/evaluation/benchmark_comparison.png" />'
-
+    # Table Headers
+    xml += f"""
+    <!-- Table Headers -->
+    <rect x="120" y="320" width="1680" height="40" fill="#F1F5F9" rx="5" />
+    <text x="140" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>評測維度</text>
+    <text x="380" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>玩家 Base</text>
+    <text x="490" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>玩家 SFT v1</text>
+    <text x="600" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>玩家 DPO v1</text>
+    <text x="710" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>玩家 SFT v2</text>
+    <text x="820" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>玩家 DPO v2</text>
+    <text x="930" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>裁判 Base</text>
+    <text x="1040" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>裁判 SFT v1</text>
+    <text x="1150" y="348" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>裁判 SFT v2</text>
+    <text x="1280" y="348" fill="{THEME['accent_blue']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>核心改進評估 (Delta / Status)</text>
+    
+    <!-- Row 1: Toxicity Score / JSON Validity -->
+    <text x="140" y="390" fill="{THEME['text_main']}" font-size="14" {SVG_FONT_FAMILY}>傷害分 / JSON 遵循率</text>
+    <text x="380" y="390" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_tox[0]}</text>
+    <text x="490" y="390" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_tox[1]}</text>
+    <text x="600" y="390" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_tox[2]}</text>
+    <text x="710" y="390" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_tox[3]}</text>
+    <text x="820" y="390" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{p_tox[4]}</text>
+    <text x="930" y="390" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_val[0]}</text>
+    <text x="1040" y="390" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_sft1_val}</text>
+    <text x="1150" y="390" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{r_val[1]}</text>
+    <text x="1280" y="390" fill="{THEME['accent_green']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>玩家傷害 +6.54 | 裁判 JSON 100% 穩定</text>
+    
+    <!-- Row 2: Adherence / Correlation -->
+    <text x="140" y="420" fill="{THEME['text_main']}" font-size="14" {SVG_FONT_FAMILY}>字數遵循率 / 皮爾森 ρ</text>
+    <text x="380" y="420" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_adh[0]}</text>
+    <text x="490" y="420" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_adh[1]}</text>
+    <text x="600" y="420" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_adh[2]}</text>
+    <text x="710" y="420" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_adh[3]}</text>
+    <text x="820" y="420" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{p_adh[4]}</text>
+    <text x="930" y="420" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_pea[0]}</text>
+    <text x="1040" y="420" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_sft1_pea}</text>
+    <text x="1150" y="420" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{r_pea[1]}</text>
+    <text x="1280" y="420" fill="{THEME['accent_green']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>DPO 抑制冗長 | 裁判適應極端髒話</text>
+ 
+    <!-- Row 3: Shannon Entropy -->
+    <text x="140" y="450" fill="{THEME['text_main']}" font-size="14" {SVG_FONT_FAMILY}>詞彙香農熵 (Entropy)</text>
+    <text x="380" y="450" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_ent[0]}</text>
+    <text x="490" y="450" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_ent[1]}</text>
+    <text x="600" y="450" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_ent[2]}</text>
+    <text x="710" y="450" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_ent[3]}</text>
+    <text x="820" y="450" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{p_ent[4]}</text>
+    <text x="930" y="450" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_ent[0]}</text>
+    <text x="1040" y="450" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_sft1_ent}</text>
+    <text x="1150" y="450" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{r_ent[1]}</text>
+    <text x="1280" y="450" fill="{THEME['accent_green']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>雙模型多樣性皆提升，無模式崩塌</text>
+ 
+    <!-- Row 4: Avg Latency -->
+    <text x="140" y="480" fill="{THEME['text_main']}" font-size="14" {SVG_FONT_FAMILY}>推理延遲 (Latency)</text>
+    <text x="380" y="480" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_lat[0]}</text>
+    <text x="490" y="480" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_lat[1]}</text>
+    <text x="600" y="480" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_lat[2]}</text>
+    <text x="710" y="480" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{p_lat[3]}</text>
+    <text x="820" y="480" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{p_lat[4]}</text>
+    <text x="930" y="480" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_lat[0]}</text>
+    <text x="1040" y="480" fill="{THEME['text_muted']}" font-size="14" {SVG_FONT_FAMILY}>{r_sft1_lat}</text>
+    <text x="1150" y="480" fill="{THEME['text_main']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>{r_lat[1]}</text>
+    <text x="1280" y="480" fill="{THEME['accent_green']}" font-size="14" font-weight="700" {SVG_FONT_FAMILY}>均維持在毫秒級即時交互響應</text>
+ 
+    <line x1="120" y1="515" x2="1800" y2="515" stroke="{THEME['border']}" stroke-width="1" />
+ 
+    <!-- Consolidated Chart -->
+    <image x="510" y="530" width="900" height="400" href="../consolidated_benchmark_comparison.png" />
+    """
+    
     xml += "</svg>"
     return xml
 

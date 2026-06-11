@@ -37,8 +37,8 @@ services:
     volumes:
       - hf_cache:/root/.cache/huggingface
       - ${HOST_MODEL_DIR:-/media/dalin/data/models}:/models
-      - ./referee_lora_output/referee_agent/referee_agent:/lora/referee_agent
-      - ./player_lora_output/player_agent_dpo/player_agent_dpo:/lora/player_agent_dpo
+      - ./referee_lora_output/referee_agent_v2:/lora/referee_agent_v2
+      - ./player_lora_output/player_agent_dpo_v2/player_agent_dpo_v2:/lora/player_agent_dpo_v2
     deploy:
       resources:
         reservations:
@@ -53,7 +53,7 @@ services:
       --model ${VLLM_MODEL_NAME:-google/gemma-4-E4B-it}
       --served-model-name gemma-base
       --enable-lora
-      --lora-modules referee-agent=/lora/referee_agent player-agent=/lora/player_agent_dpo
+      --lora-modules referee-agent=/lora/referee_agent_v2 player-agent=/lora/player_agent_dpo_v2
       --gpu-memory-utilization 0.90
       --max-model-len 4096
       --enable-prefix-caching

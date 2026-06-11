@@ -9,8 +9,8 @@
   "ensure_weight_tying": false,
   "eva_config": null,
   "exclude_modules": [
-    "audio_tower",
-    "vision_tower"
+    "vision_tower",
+    "audio_tower"
   ],
   "fan_in_fan_out": false,
   "inference_mode": true,
